@@ -1,3 +1,7 @@
+""" 
+Functions to download, propagate and manipulate TLE data. 
+"""
+
 #imports
 import os
 import configparser
@@ -5,10 +9,11 @@ import json
 import time
 import requests
 import numpy as np
+from sgp4.api import Satrec
 from datetime import datetime, timedelta
 
 #local imports
-from ..tools.coordinates import kep2car
+from .conversions import kep2car
 
 def SpaceTrack_authenticate():
     """Authenticate with SpaceTrack using the credentials stored in the config file. 
@@ -184,3 +189,146 @@ def NORAD_TLE_History(NORAD_ids, constellation, folder_path="/external/NORAD_TLE
                 process_satellite_data(output, folder_path, s)
     
     print("Completed session")
+
+def read_TLEs(filename):
+    """Read a TLE file and return a list of TLEs
+
+    Args:
+        filename (string): name of the TLE file
+
+    Returns:
+        list: list of TLEs
+    """
+    #open the file
+    with open(filename, 'r') as f:
+        #read the file
+        rawTLEs = f.readlines()
+        #split the file into a list of TLEs every 2 lines
+        TLEs = [rawTLEs[i:i+2] for i in range(0, len(rawTLEs), 2)]
+        #remove the new line character from the end of each TLE
+        TLEs = [TLEs[i][0] + '' + TLEs[i][1].strip('\n') for i in range(0, len(TLEs), 1)]
+        #drop the last two characters of each TLE (get rid of the \n)
+        print("number of TLEs read: ", len(TLEs))
+        #close the file
+        f.close()
+        #return the list of TLEs
+        return TLEs
+    
+def TLE_time(TLE):
+    """Find the time of a TLE in julian day format"""
+    #find the epoch section of the TLE
+    epoch = TLE[18:32]
+    #convert the first two digits of the epoch to the year
+    year = 2000+int(epoch[0:2])
+    
+    # the rest of the digits are the day of the year and fractional portion of the day
+    day = float(epoch[2:])
+    #convert the day of the year to a day, month, year format
+    date = datetime.datetime(year, 1, 1) + datetime.timedelta(day - 1)
+    #convert the date to a julian date
+    jd = (date - datetime.datetime(1858, 11, 17)).total_seconds() / 86400.0 + 2400000.5
+    return jd
+
+def sgp4_prop_TLE(TLE, jd_start, jd_end, dt, alt_series = False):
+
+    """Given a TLE, a start time, end time, and time step, propagate the TLE and return the time-series of Cartesian coordinates, and accompanying time-stamps (MJD)
+        Note: Simply a wrapper for the SGP4 routine in the sgp4.api package (Brandon Rhodes)
+    Args:
+        TLE (string): TLE to be propagated
+        jd_start (float): start time of propagation in Julian Date format
+        jd_end (float): end time of propagation in Julian Date format
+        dt (float): time step of propagation in seconds
+        alt_series (bool, optional): If True, return the altitude series as well as the position series. Defaults to False.
+        
+    Returns:
+    list: list of lists containing the time-series of Cartesian coordinates, and accompanying time-stamps (MJD)
+    
+    """
+
+    if jd_start > jd_end:
+        print('jd_start must be less than jd_end')
+        return
+
+    ephemeris = []
+    
+    #convert dt from seconds to julian day
+    dt_jd = dt/86400
+
+    #split at the new line
+    split_tle = TLE.split('\n')
+    s = split_tle[0]
+    r = split_tle[1]
+
+    fr = 0.0 # precise fraction (SGP4 docs for more info)
+    
+    #create a satellite object
+    satellite = Satrec.twoline2rv(s, r)
+
+    time = jd_start
+    # for i in range (jd_start, jd_end, dt):
+    while time < jd_end:
+        # propagate the satellite to the next time step
+        # Position is in idiosyncratic True Equator Mean Equinox coordinate frame used by SGP4
+        # Velocity is the rate at which the position is changing, expressed in kilometers per second
+        error, position, velocity = satellite.sgp4(time, fr)
+        if error != 0:
+            print('Satellite position could not be computed for the given date')
+            break
+        else:
+            ephemeris.append([time,position, velocity]) #jd time, pos, vel
+        time += dt_jd
+
+    return ephemeris
+
+
+def combine_TLE2eph(TLE_list,jd_start,jd_stop, dt=(15*60)):
+    """ Takes a list of TLES a returns an ephemeris that updates with each new TLE. Outputs a position and velocity every 15 minutes from the hour.
+    Args:
+        TLE_list (list): list of TLEs (use read_TLEs function to generate this)
+        jd_start (float): start time in JD
+        jd_stop (float): stop time in JD
+        dt (float): time step in seconds
+    Returns:
+        ephemeris (array): ephemeris of the satellite in ECI coordinates(time, pos, vel)
+        """
+    #Given a list of TLEs return an ephemeris that is updated with the TLE
+    #default dt is 15 minutes
+    #propagated with sgp4
+    dt_jd = dt/86400
+    current_jd = jd_start #this should be the midnight of the day you want to start
+    #number of steps
+    n_steps = int((jd_stop - jd_start)/dt_jd)
+    #t since update
+    orbit_ages = []
+    ephemeris = []
+    while current_jd < jd_stop:
+        #loop through the TLEs
+        for i in range(0, len(TLE_list), 1):
+            #get the time of the current TLE
+            TLE_jd = TLE_time(TLE_list[i])
+            #get the time of the next TLE
+            if i == len(TLE_list)-1:
+                next_TLE_jd = TLE_time(TLE_list[0])
+            else:
+                next_TLE_jd = TLE_time(TLE_list[i+1])
+            #if the current jd is between the current TLE and the next TLE, use the current TLE
+            if current_jd > TLE_jd and current_jd < next_TLE_jd:
+                #get the ephemeris of the satellite
+                eph = sgp4_prop_TLE(TLE_list[i], current_jd, (current_jd+dt_jd), dt=dt) #prop for one step 
+                #append the contents of eph to the ephemeris
+                ephemeris.extend(eph)
+                #increment the current jd
+                current_jd += dt_jd
+                #increment the time since update
+                jd_orbit_age = current_jd - TLE_jd
+                # convert from julian days to hours
+                hours_orbit_age = jd_orbit_age*24
+                orbit_ages.append(hours_orbit_age)
+            elif current_jd > jd_stop:
+                print("prop time is greater than stop time. Stopping propagation.")
+            break  
+
+    # chop the ephemeris to be the correct number of steps using the n_steps variable (stops lists being 1 too long due to Python indexing)
+    ephemeris = ephemeris[0:n_steps]
+    orbit_ages = orbit_ages[0:n_steps]
+    return ephemeris, orbit_ages
