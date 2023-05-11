@@ -1,9 +1,14 @@
+#imports
 import os
 import configparser
 import json
 import time
 import requests
+import numpy as np
 from datetime import datetime, timedelta
+
+#local imports
+from ..tools.coordinates import kep2car
 
 def SpaceTrack_authenticate():
     """Authenticate with SpaceTrack using the credentials stored in the config file. 
@@ -50,7 +55,8 @@ def get_satellite_data(session, uriBase, requestCmdAction, requestOMMStarlink1, 
 
     return resp.text
 
-def process_satellite_data(output, folder_path, s, raw):
+def process_satellite_data(output, folder_path, s):
+    # Process the TLE data and write it to the file that is named after its NORAD ID
     with open(folder_path + str(s) + '.txt', "w") as f:
         all_lines = output.splitlines()
         stringofdicts = all_lines[0]
@@ -62,71 +68,92 @@ def process_satellite_data(output, folder_path, s, raw):
             key_value_pairs = [x.split(':') for x in key_value_pairs]
             spacetrack_dict = dict(key_value_pairs)
 
-            if raw:
-                f.write(spacetrack_dict['TLE_LINE1'] + '\n' + spacetrack_dict['TLE_LINE2'] + '\n')
-            else:
-        # Parse the first line
-                    tle_dict["line number"] = line_one[0]
-                    tle_dict["satellite catalog number"] = line_one[2:7]
-                    tle_dict["classification"] = line_one[7]
-                    tle_dict["International Designator(launch year)"] = line_one[9:11]
-                    tle_dict["International Designator (launch num)"] = line_one[11:14]
-                    tle_dict["International Designator (piece of launch)"] = line_one[
-                        14:17
-                    ]
-                    tle_dict["epoch year"] = line_one[18:20]
-                    tle_dict["epoch day"] = line_one[20:32]
-                    tle_dict[
-                        "first time derivative of mean motion(ballisitc coefficient)"
-                    ] = line_one[33:43]
-                    tle_dict[
-                        "second time derivative of mean motion(delta-dot)"
-                    ] = line_one[44:52]
-                    tle_dict["bstar drag term"] = line_one[53:61]
-                    tle_dict["ephemeris type"] = line_one[62]
-                    tle_dict["element number"] = line_one[63:68]
-                    tle_dict["checksum"] = line_one[68:69]
+            # this will write the pulled TLE to the text file
+            f.write(spacetrack_dict['TLE_LINE1'] + '\n' + spacetrack_dict['TLE_LINE2'] + '\n')
+        f.close()# Process the TLE data and write it to the file
 
-                    # Parse the second line (ignore the line number,
-                    # satellite catalog number, and checksum)
-                    tle_dict["inclination"] = line_two[8:16]
-                    tle_dict["right ascension of the ascending node"] = line_two[17:25]
-                    tle_dict["eccentricity"] = line_two[26:33]
-                    tle_dict["argument of perigee"] = line_two[34:42]
-                    tle_dict["mean anomaly"] = line_two[43:51]
-                    tle_dict["mean motion"] = line_two[52:63]
-                    tle_dict["revolution number at epoch"] = line_two[63:68]
+def tle_convert(tle_dict, display=False):
+    """
+    Converts a TLE dictionary into the corresponding keplerian elements
+    
+    Args:
+        tle_dict (dict): dictionary of TLE data as provided by the tle_parse function
 
-                    #convert epoch to julian day
-                    year, decimal_days = tle_dict['epoch year'], tle_dict['epoch day']
-                    year = 2000 + int( year)
-                    decimal_days = float(decimal_days)
-                    #convert the year and decimal days to a datetime object
-                    date = datetime(year, 1, 1) + timedelta(days=decimal_days - 1)
-                    #convert the datetime object to MJD
-                    epoch_mjd = (date - datetime(1858, 11, 17)).total_seconds() / 86400.0
-                    #convert to julian date
-                    epoch_jd = epoch_mjd + 2400000.5
+    Returns:
+        keplerian_dict(dict): dictionary containing Keplerian elements
+    """
 
-                    kep_elems = tle_convert(tle_dict)
+    # Standard gravitational parameter for the Earth
+    GM = 398600.4415 * (1e3)**3 # m^3/s^2
 
-                    x_car, y_car, z_car, u_car, v_car, w_car = kep2car(
-                        a=kep_elems["a"],
-                        e=kep_elems["e"],
-                        i=kep_elems["i"],
-                        w=kep_elems["RAAN"],
-                        W=kep_elems["arg_p"],
-                        V=kep_elems["true_anomaly"],
-                    )
-                    state_i = [x_car, y_car, z_car, u_car, v_car, w_car]
-                    
-                    f.write(
-                        "sat:"+ str(tle_dict["satellite catalog number"])+ "ECI:"+ str(state_i)+ "jd_time:"+ str(epoch_jd)+ "\n")
-            f.close()# Process the TLE data and write it to the file
-    session.close()
-    print("Completed Session")
+    # Convert RAAN from degrees to radians
+    RAAN = np.radians(float(tle_dict['right ascension of the ascending node']))
+    
+    # Convert argument of perigee from degrees to radians
+    arg_p = np.radians(float(tle_dict['argument of perigee']))
+    
+    # Convert mean motion from revolutions per day to radians per second
+    mean_motion = float(tle_dict['mean motion']) * (2 * np.pi / 86400)
+    
+    # Compute the period of the orbit in seconds
+    period = 2 * np.pi / mean_motion
+    
+    # Compute the semi-major axis
+    n = mean_motion # mean motion in radians per second
+    a = (GM / (n ** 2)) ** (1/3) / 1000 # in km
+    
+    # Convert mean anomaly from degrees to radians
+    M = np.radians(float(tle_dict['mean anomaly']))
+    
+    # Extract eccentricity as decimal value
+    e = float("0." + tle_dict['eccentricity'])
+    
+    # Convert inclination from degrees to radians
+    inclination = np.radians(float(tle_dict['inclination']))
+    
+    # Initial Guess at Eccentric Anomaly
+    if M < np.pi:
+        E = M + (e / 2)
+    else:
+        E = M - (e / 2)
 
-def NORAD_TLE_History(NORAD_ids, constellation, folder_path="/Users/charlesc/Documents/GitHub/Astrodynamics/data/TLEs_Raw/", raw=False):
+    # Numerical iteration for Eccentric Anomaly
+    f = lambda E: E - e * np.sin(E) - M
+    fp = lambda E: 1 - e * np.cos(E)
+    E = np.float64(E)
+    r_tol = 1e-8 # set the convergence tolerance for the iteration
+    max_iter = 50 # set the maximum number of iterations allowed
+    for it in range(max_iter):
+        f_value = f(E)
+        fp_value = fp(E)
+        E_new = E - f_value / fp_value
+        if np.abs(E_new - E) < r_tol:
+            E = E_new
+            break
+        E = E_new
+    else:
+        raise ValueError("Eccentric anomaly did not converge")
+        
+    eccentric_anomaly = E
+
+    # Compute True Anomaly
+    true_anomaly = 2 * np.arctan2(np.sqrt(1 + e) * np.sin(eccentric_anomaly / 2),
+                                  np.sqrt(1 - e) * np.cos(eccentric_anomaly / 2))
+
+    # Dictionary of Keplerian elements
+    keplerian_dict = {'a': a, 'e': e, 'i': inclination, 'RAAN': RAAN, 'arg_p': arg_p, 'true_anomaly': np.degrees(true_anomaly)}
+    if display == True:
+        print("Keplerian Elements:")
+        print("a = {:.2f} km".format(keplerian_dict['a']))
+        print("e = {:.2f}".format(keplerian_dict['e']))
+        print("i = {:.2f} deg".format(np.degrees(keplerian_dict['i'])))
+        print("RAAN = {:.2f} deg".format(np.degrees(keplerian_dict['RAAN'])))
+        print("arg_p = {:.2f} deg".format(np.degrees(keplerian_dict['arg_p'])))
+        print("true_anomaly = {:.2f} deg".format(np.degrees(keplerian_dict['true_anomaly'])))
+
+    return keplerian_dict
+
+def NORAD_TLE_History(NORAD_ids, constellation, folder_path="/external/NORAD_TLEs/"):
     available_constellations = ['starlink', 'oneweb']
     if constellation not in available_constellations:
         raise ValueError("Invalid constellation name. Select one of: %s" % available_constellations)
@@ -154,6 +181,6 @@ def NORAD_TLE_History(NORAD_ids, constellation, folder_path="/Users/charlesc/Doc
         for s in NORAD_ids:
             if s in satIds:
                 output = get_satellite_data(session, uriBase, requestCmdAction, requestOMMStarlink1, requestOMMStarlink2, s)
-                process_satellite_data(output, folder_path, s, raw)
+                process_satellite_data(output, folder_path, s)
     
     print("Completed session")

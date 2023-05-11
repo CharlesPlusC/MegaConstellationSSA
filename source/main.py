@@ -1,3 +1,5 @@
+from source.tools.fetch_data import NORAD_TLE_History
+
 #Manually define the selected satellites for reproducability
 norad_OW_L5 = [48042, 48043, 48044, 48045, 48046, 48047, 48048, 48049, 48050, 48051]
 norad_OW_L4 = [47269,47280,47258,47279,47277,47273,47260,47264,47266,47288]
@@ -11,8 +13,6 @@ norad_SL_L36 = [50803, 50804, 50805, 50806, 50807, 50808, 50809, 50810, 50811, 5
 SL_norads = norad_SL_L28 + norad_SL_L36 + norad_SL_L30
 OW_norads = norad_OW_L4 + norad_OW_L5 + norad_OW_L6
 
-# list of per-constellation NORAD IDs
-norad_lists = [SL_norads, OW_norads]
-
-# turn the NORAD IDs from ints to strings for the TLE analysis
-norad_lists = [[str(i) for i in j] for j in norad_lists]
+# Fetch their archive of all availble TLEs for the constellations (does NOT check if they already exist)
+NORAD_TLE_History(OW_norads, constellation='oneweb', raw=True)
+NORAD_TLE_History(SL_norads, constellation='starlink', raw=True)
