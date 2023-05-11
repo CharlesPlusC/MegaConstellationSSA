@@ -15,6 +15,13 @@ from datetime import datetime, timedelta
 #local imports
 from .conversions import kep2car
 
+class MyError(Exception):
+    def __init___(self, args):
+        Exception.__init__(
+            self, "my exception was raised with arguments {0}".format(args)
+        )
+        self.args = args
+
 def SpaceTrack_authenticate():
     """Authenticate with SpaceTrack using the credentials stored in the config file. 
 
@@ -158,35 +165,97 @@ def tle_convert(tle_dict, display=False):
 
     return keplerian_dict
 
-def NORAD_TLE_History(NORAD_ids, constellation, folder_path="/external/NORAD_TLEs/"):
-    available_constellations = ['starlink', 'oneweb']
+def download_tle_history(NORAD_ids, constellation, folder_path="external/NORAD_TLEs"):
+    """
+    This function takes a list of NORAD IDs and returns a dictionary of all available TLEs for each satellite. 
+    The TLEs are returned as a list of strings, with each string containing the TLE for a single satellite. The dictionary keys are the NORAD IDs.
+    The TLEs are returned in chronological order, with the most recent TLE first. The function samples the entire archive of available TLEs for each satellite.
+    NOTE: The function will take a long time to run if there are many satellites in the list because there is a rate limit on the number of queries that can be made to the API (1 query per 13 seconds).
+
+    Args:
+        NORAD_ids (list): A list of NORAD IDs for the satellites of interest.
+        constellation (str): The name of the constellation. This is used to determine the correct TLE archive to query.
+        folder_path (str): The path to the folder where the TLEs will be saved. Defaults to "external/NORAD_TLEs".
+    """
+
+    available_constellations = ["starlink", "oneweb"]
     if constellation not in available_constellations:
-        raise ValueError("Invalid constellation name. Select one of: %s" % available_constellations)
+        raise ValueError(f"Invalid constellation name. Select one of: {available_constellations}")
 
-    const = 'STARLINK' if constellation == 'starlink' else 'ONEWEB'
+    if constellation == "starlink":
+        const = "STARLINK"
+    elif constellation == "oneweb":
+        const = "ONEWEB"
 
-    uriBase = "https://www.space-track.org"
-    requestLogin = "/ajaxauth/login"
-    requestCmdAction = "/basicspacedata/query"
-    requestFindStarlinks = "/class/tle_latest/NORAD_CAT_ID/>40000/ORDINAL/1/OBJECT_NAME/"+const+"~~/format/json/orderby/NORAD_CAT_ID%20asc"
-    requestOMMStarlink1 = "/class/omm/NORAD_CAT_ID/"
-    requestOMMStarlink2 = "/orderby/EPOCH%20asc/format/json"
-    
+    # Verify that NORAD IDs are integers
+    if not all(isinstance(NORAD_id, int) for NORAD_id in NORAD_ids):
+        raise ValueError("NORAD ids must all be integers")
+
+    # Authenticate with Space-Track
     username, password = SpaceTrack_authenticate()
-    siteCred = {'identity': username, 'password': password}
+    site_credentials = {"identity": username, "password": password}
 
+    # Define API endpoints
+    uri_base = "https://www.space-track.org"
+    login_endpoint = "/ajaxauth/login"
+    query_endpoint = "/basicspacedata/query"
+    find_satellites_query = f"/class/tle_latest/NORAD_CAT_ID/>40000/ORDINAL/1/OBJECT_NAME/{const}~~/format/json/orderby/NORAD_CAT_ID%20asc"
+    omm_query_1 = "/class/omm/NORAD_CAT_ID/"
+    omm_query_2 = "/orderby/EPOCH%20asc/format/json"
+
+    # Use requests package to drive the RESTful session with space-track.org
     with requests.Session() as session:
-        resp = session.post(uriBase + requestLogin, data=siteCred)
-        if resp.status_code != 200:
-            raise Exception("POST fail on login")
+        # Log in to Space-Track
+        response = session.post(uri_base + login_endpoint, data=site_credentials)
+        if response.status_code != 200:
+            raise ValueError(f"POST failed on login: {response}")
 
-        satIds = get_satellite_ids(session, uriBase, requestCmdAction, requestFindStarlinks)
-        NORAD_ids = [int(i) for i in NORAD_ids]
+        # Query for satellites
+        response = session.get(uri_base + query_endpoint + find_satellites_query)
+        if response.status_code != 200:
+            raise ValueError(f"GET failed on request for satellites: {response}")
 
-        for s in NORAD_ids:
-            if s in satIds:
-                output = get_satellite_data(session, uriBase, requestCmdAction, requestOMMStarlink1, requestOMMStarlink2, s)
-                process_satellite_data(output, folder_path, s)
+        # Parse response JSON
+        satellite_data = json.loads(response.text)
+        satellite_ids = [int(entry["NORAD_CAT_ID"]) for entry in satellite_data]
+
+        # Download TLE history for each satellite
+        for norad_id in NORAD_ids:
+            if norad_id in satellite_ids
+                # Throttle requests to avoid rate limiting (1 query per 13 seconds)
+                last_request = time.time()
+                if time.time() - last_request < 13:
+                    time.sleep(13 - (time.time() - last_request))
+                last_request = time.time()
+
+                # Get OMM data for the specific NORAD ID
+                response = session.get(uri_base + query_endpoint + omm_query_1 + str(norad_id) + omm_query_2)
+                if response.status_code != 200:
+                    raise ValueError(f"GET failed on request for satellite {norad_id}: {response}")
+
+                # Save TLE data to a text file
+                output = response.text
+                with open(f"{folder_path}/{norad_id}.txt", "w") as f:
+                    # Split the output into lines
+                    all_lines = output.splitlines()
+                    # Parse all lines into a dictionary and drop the first line
+                    string_of_dicts = all_lines[0]
+
+                    # Find each dictionary within the list
+                    dicts = string_of_dicts.split("},")
+
+                    # Format dictionaries and extract TLE data
+                    for i in range(len(dicts)):
+                        formatted_dict = dicts[i][2:].replace('"', '')
+                        key_value_pairs = formatted_dict.split(',')
+
+                        # Extract TLE lines from the key-value pairs
+                        line_zero = key_value_pairs[0].split(':')[1]
+                        line_one = key_value_pairs[1].split(':')[1]
+                        line_two = key_value_pairs[2].split(':')[1]
+
+                        # Write TLE data to the file
+                        f.write(f"{line_one}\n{line_two}\n")
     
     print("Completed session")
 
@@ -202,9 +271,9 @@ def read_TLEs(filename):
     #open the file
     with open(filename, 'r') as f:
         #read the file
-        rawTLEs = f.readlines()
+        TLEs = f.readlines()
         #split the file into a list of TLEs every 2 lines
-        TLEs = [rawTLEs[i:i+2] for i in range(0, len(rawTLEs), 2)]
+        TLEs = [TLEs[i:i+2] for i in range(0, len(TLEs), 2)]
         #remove the new line character from the end of each TLE
         TLEs = [TLEs[i][0] + '' + TLEs[i][1].strip('\n') for i in range(0, len(TLEs), 1)]
         #drop the last two characters of each TLE (get rid of the \n)

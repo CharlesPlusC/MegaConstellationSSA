@@ -8,7 +8,7 @@ import numpy as np
 import datetime
 
 #local imports
-from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE, 
+from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE
 from .conversions import jd_to_utc, kep2car, utc_jd_date, midnight_jd_date
 
 rmse = lambda x: np.sqrt(np.mean(np.square(x)))

@@ -1,4 +1,7 @@
-from source.tools.analysis_tools import NORAD_vs_SUP_TLE_analysis
+import os
+import sys
+from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis
+from tools.tletools import NORAD_TLE_History
 
 #Manually define the selected satellites for reproducability
 norad_OW_L5 = [48042, 48043, 48044, 48045, 48046, 48047, 48048, 48049, 48050, 48051]
@@ -17,5 +20,9 @@ OW_norads = norad_OW_L4 + norad_OW_L5 + norad_OW_L6
 SL_norads = [str(i) for i in SL_norads]
 OW_norads = [str(i) for i in OW_norads]
 
-NORAD_vs_SUP_TLE_analysis(NORADS = SL_norads) #run the function on the SL satellites
-NORAD_vs_SUP_TLE_analysis(NORADS = OW_norads) #run the function on the OW satellites
+# fetch the available TLE archive for the specified NORAD IDs
+NORAD_TLE_History(SL_norads, 'starlink') 
+NORAD_TLE_History(OW_norads, 'oneweb')
+
+# NORAD_vs_SUP_TLE_analysis(NORADS = SL_norads) #run the function on the SL satellites
+# NORAD_vs_SUP_TLE_analysis(NORADS = OW_norads) #run the function on the OW satellites

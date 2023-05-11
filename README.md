@@ -28,3 +28,9 @@ The data for the SUP_TLEs are already provided in the folder as there is current
 If you have any issues with the code, please raise an issue on this repository and I will try to get back to you as soon as possible.
 
 ## License: GNU GPLv3
+
+## Envs
+to save your current enviro
+``` bash
+conda env export > megaconst_env.yml
+```
