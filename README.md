@@ -21,8 +21,8 @@ password = YourPassword
 6. Run the code in main.py for the full analysis
 
 ## Data
-The data for the NORAD_TLEs is downloaded automatically using the functions provided.
-The data for the SUP_TLEs are already provided in the folder as there is currently no way of programmatically downloading them.
+The data for the SUP_TLEs and NORAD_TLEs are already provided to save time. 
+If you wish to download the data yourself, you can do so for the NORAD TLEs by running the getdata.py script. Note that there is currently no way of downloading SUP_TLE data programatically so you will have to do this manually from celestrak.org.
 
 ## Issues
 If you have any issues with the code, please raise an issue on this repository and I will try to get back to you as soon as possible.
