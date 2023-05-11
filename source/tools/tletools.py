@@ -226,7 +226,7 @@ def download_tle_history(NORAD_ids, constellation, folder_path="external/NORAD_T
 
         # Download TLE history for each satellite
         for norad_id in NORAD_ids:
-            if norad_id in satellite_ids
+            if norad_id in satellite_ids:
                 # Throttle requests to avoid rate limiting (1 query per 13 seconds)
                 last_request = time.time()
                 if time.time() - last_request < 13:
@@ -243,26 +243,17 @@ def download_tle_history(NORAD_ids, constellation, folder_path="external/NORAD_T
                 with open(f"{folder_path}/{norad_id}.txt", "w") as f:
                     # Split the output into lines
                     all_lines = output.splitlines()
-                    # Parse all lines into a dictionary and drop the first line
-                    string_of_dicts = all_lines[0]
+                    #
+                    list_of_dicts = all_lines[0]
+                    data_list = json.loads(list_of_dicts)
+                    # Write the TLEs to the file
+                    for line in data_list:
+                        f.write(line["TLE_LINE1"] + "\n")
+                        f.write(line["TLE_LINE2"] + "\n")
 
-                    # Find each dictionary within the list
-                    dicts = string_of_dicts.split("},")
-
-                    # Format dictionaries and extract TLE data
-                    for i in range(len(dicts)):
-                        formatted_dict = dicts[i][2:].replace('"', '')
-                        key_value_pairs = formatted_dict.split(',')
-
-                        # Extract TLE lines from the key-value pairs
-                        line_zero = key_value_pairs[0].split(':')[1]
-                        line_one = key_value_pairs[1].split(':')[1]
-                        line_two = key_value_pairs[2].split(':')[1]
-
-                        # Write TLE data to the file
-                        f.write(f"{line_one}\n{line_two}\n")
-    
-    print("Completed session")
+                print(f"Downloaded TLE history for satellite {norad_id}")
+            else:
+                print(f"Satellite {norad_id} not found in specified constellation: {constellation}")
 
 def read_TLEs(filename):
     """Read a TLE file and return a list of TLEs
