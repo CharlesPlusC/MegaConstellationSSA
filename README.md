@@ -11,7 +11,7 @@ Code repository accompanying the paper: On the Limits of Current Practices in Un
 ``` bash
  (conda activate megaconst)
 ```
-4. Create a file called SLTrack.ini and put it in the root directory of the repository. The file should contain your Space-track.org username and password in the following format:
+4. If you wish to redownload the TLE data: Create a file called SLTrack.ini and put it in the root directory of the repository. The file should contain your Space-track.org username and password in the following format:
 ``` bash
 [configuration]
 username = your_email@email.com
@@ -21,8 +21,9 @@ password = YourPassword
 6. Run the code in main.py for the full analysis
 
 ## Data
-The data for the SUP_TLEs and NORAD_TLEs are already provided to save time. 
-If you wish to download the data yourself, you can do so for the NORAD TLEs by running the getdata.py script. Note that there is currently no way of downloading SUP_TLE data programatically so you will have to do this manually from celestrak.org.
+- The data for the SUP_TLEs and NORAD_TLEs are already provided to save time. 
+    If you wish to download the data yourself, you can do so for the NORAD TLEs by running the getdata.py script. Note that there is currently no way of downloading SUP_TLE data programatically so you will have to do this manually from celestrak.org.
+- The NORAD IDs of the satellites selected for this study are provided in external/selected_satellites.json
 
 ## Issues
 If you have any issues with the code, please raise an issue on this repository and I will try to get back to you as soon as possible.

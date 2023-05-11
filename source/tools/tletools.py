@@ -22,6 +22,11 @@ class MyError(Exception):
         )
         self.args = args
 
+def load_satellite_lists(file_path="external/selected_satellites.json"):
+    with open(file_path, "r") as f:
+        satellite_lists = json.load(f)
+    return satellite_lists
+
 def SpaceTrack_authenticate():
     """Authenticate with SpaceTrack using the credentials stored in the config file. 
 
