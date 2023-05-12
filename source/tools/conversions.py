@@ -9,6 +9,8 @@ from astropy.time import Time
 from poliastro.bodies import Earth
 from poliastro.twobody import Orbit
 import datetime
+from astropy.coordinates import GCRS, ITRS, CartesianRepresentation, CartesianDifferential
+from pyproj import Transformer
 
 def kep2car(a, e, i, w, W, V):
     # Suppress the UserWarning for true anomaly wrapping
@@ -34,6 +36,41 @@ def kep2car(a, e, i, w, W, V):
     vx, vy, vz = vel_vec
 
     return x, y, z, vx, vy, vz
+
+def eci2ecef_astropy(eci_pos, eci_vel, mjd):
+    # Convert MJD to isot format for Astropy
+    time_utc = Time(mjd, format="mjd", scale='utc')
+
+    # Convert ECI position and velocity to ECEF coordinates using Astropy
+    eci_cartesian = CartesianRepresentation(eci_pos.T * u.km)
+    eci_velocity = CartesianDifferential(eci_vel.T * u.km / u.s)
+    gcrs_coords = GCRS(eci_cartesian.with_differentials(eci_velocity), obstime=time_utc)
+    itrs_coords = gcrs_coords.transform_to(ITRS(obstime=time_utc))
+
+    # Get ECEF position and velocity from Astropy coordinates
+    ecef_pos = np.column_stack((itrs_coords.x.value, itrs_coords.y.value, itrs_coords.z.value))
+    ecef_vel = np.column_stack((itrs_coords.v_x.value, itrs_coords.v_y.value, itrs_coords.v_z.value))
+
+    return ecef_pos, ecef_vel
+
+def ecef_to_lla(x, y, z):
+    # Convert input coordinates to meters
+    x_m, y_m, z_m = x * 1000, y * 1000, z * 1000
+    
+    # Create a transformer for converting between ECEF and LLA
+    transformer = Transformer.from_crs(
+        "EPSG:4978", # WGS-84 (ECEF)
+        "EPSG:4326", # WGS-84 (LLA)
+        always_xy=True # Specify to always return (X, Y, Z) ordering
+    )
+
+    # Convert coordinates
+    lon, lat, alt_m = transformer.transform(x_m, y_m, z_m)
+
+    # Convert altitude to kilometers
+    alt_km = alt_m / 1000
+
+    return lat, lon, alt_km
 
 def jd_to_utc(jd):
     """Converts Julian Date to UTC time tag(datetime object) using Astropy"""

@@ -32,7 +32,7 @@ If you have any issues with the code, please raise an issue on this repository a
 ## License: GNU GPLv3
 
 ## Envs
-to save your current enviro
+If you make changes to your environment and you wish to save these to the envionment file:
 ``` bash
 conda env export > megaconst_env.yml
 ```

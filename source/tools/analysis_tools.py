@@ -6,12 +6,12 @@ import re
 import pandas as pd
 import numpy as np
 import datetime
-import glob
+import json
 from multiprocessing import Pool
 
 #local imports
 from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph
-from .conversions import jd_to_utc, utc_jd_date, midnight_jd_date, HCL_diff, dist_3d, alt_series
+from .conversions import jd_to_utc, utc_jd_date, midnight_jd_date, HCL_diff, dist_3d, alt_series, ecef_to_lla, eci2ecef_astropy
 
 rmse = lambda x: np.sqrt(np.mean(np.square(x)))
 
@@ -266,43 +266,115 @@ def NORAD_vs_SUP_TLE_analysis(NORADS = [], analysis_output_path = 'output/TLE_an
             # Use starmap to apply the analyze_files function to each pair of NORAD and SUP files
             pool.map(analyze_files, [(NORAD_file, SUP_file, NORAD_TLE_folder, SUP_TLE_folder, analysis_output_path) for NORAD_file in NORAD_TLE_files for SUP_file in SUP_TLE_files])
 
-def process_ephemeris_strings(df):
-    """Convert ephemeris strings in a dataframe to a list of floats."""
-    for i in range(len(df['master_ephs_sup'])):
-        eph_str = df['master_ephs_sup'][i].split(' ')
-        eph_time, pos1, pos2, pos3, vel1, vel2, vel3 = map(float, eph_str)
-        df.at[i, 'master_ephs_sup'] = [eph_time, pos1, pos2, pos3, vel1, vel2, vel3]
-    return df
-
-def TLE_analysis_to_df(NORADS=[]):
-    """
-    Takes the analysis files in the TLE_analysis folder and turn them into pandas dataframes.
-    Uses the NORAD IDs in the NORAD ID text files to decide which dataframe to put the data from the TLE analysis files into.
+def process_ephemeris_data(eph_str):
+    """Convert the ephemeris strings from the TLE analysis files into a list of floats.
 
     Args:
-        NORADS (list): List of NORAD IDs. 
+        eph_str (str): The ephemeris string from the TLE analysis files
 
     Returns:
-        tuple: Tuple containing two lists of pandas dataframes.
+        list: The ephemeris string converted to a list of floats
     """
-    TLE_analysis_path = "output/TLE_analysis/"
-    TLE_analysis_files = [f for f in glob.glob(os.path.join(TLE_analysis_path, "*.csv")) if str(NORADS) in f] if NORADS else glob.glob(os.path.join(TLE_analysis_path, "*.csv"))
+    eph_str = eph_str.split(' ')
+    eph_time = eph_str[0][1:-1]
+    pos1 = eph_str[1][1:-1]
+    pos2 = eph_str[2][0:-1]
+    pos3 = eph_str[3][0:-2]
+    vel1 = eph_str[4][1:-1]
+    vel2 = eph_str[5][0:-1]
+    vel3 = eph_str[6][0:-2]
+    eph_time = float(eph_time)
+    pos1 = float(pos1)
+    pos2 = float(pos2)
+    pos3 = float(pos3)
+    vel1 = float(vel1)
+    vel2 = float(vel2)
+    vel3 = float(vel3)
+    return [eph_time, pos1, pos2, pos3, vel1, vel2, vel3]
 
+import numpy as np
+import json
+
+def add_latlon_to_dfs(df):
+    """Add latitude and longitude columns to the dataframe.
+       These are calculated from the ephemeris data in the dataframe.
+
+    Args:
+        df (pandas dataframe): The dataframe to add the latitude and longitude columns to.
+
+    Returns:
+        df: The dataframe with the latitude and longitude columns added.
+    """
+    eci_positions = np.array(df['master_ephs_sup'].to_list())[:, 1:4]
+    eci_velocities = np.array(df['master_ephs_sup'].to_list())[:, 4:7]
+    mjd_times = df['times'] - 2400000.5
+    ecef_positions, _ = eci2ecef_astropy(eci_positions, eci_velocities, mjd_times)
+    lla_coords = np.array([ecef_to_lla(x, y, z) for x, y, z in ecef_positions])
+    lats = lla_coords[:, 0]
+    lons = lla_coords[:, 1]
+    df['lat'] = lats
+    df['lon'] = lons
+    return df
+
+def add_launch_numbers_to_df(df):
+    """
+    Add the launch numbers to the dataframe based on the NORAD IDs of the satellites in the dataframe.
+
+    Args:
+        df (pandas dataframe): The dataframe to add the launch numbers to.
+
+    Returns:
+        df: The dataframe with the launch numbers added.
+    """
+    with open('external/selected_satellites.json', 'r') as f:
+        selected_satellites = json.load(f)
+
+    NORAD_IDs = df['NORAD_ID'].to_list()
+    launch_numbers = []
+
+    for NORAD_ID in NORAD_IDs:
+        launch_number = re.search(r'L(\d+)', NORAD_ID)
+        if launch_number:
+            launch_numbers.append(int(launch_number.group(1)))
+        else:
+            # Handle cases where the launch number is not found
+            launch_numbers.append(None)
+
+    df['launch'] = launch_numbers
+    return df
+
+
+def TLE_analysis_to_df():
+    TLE_analysis_path = "output/TLE_analysis/"
     oneweb_NORAD_IDs = set(open('external/Constellation_NORAD_IDs/oneweb_NORAD_IDs.txt', 'r').read().splitlines())
     starlink_NORAD_IDs = set(open('external/Constellation_NORAD_IDs/starlink_NORAD_IDs.txt', 'r').read().splitlines())
+    oneweb_dfs = []
+    starlink_dfs = []
 
-    Oneweb_dfs, Starlink_dfs = [], []
+    for file in os.listdir(TLE_analysis_path):
+        if file.endswith('.csv'):
+            norad_id = file[:-4]
 
-    for file in TLE_analysis_files:
-        norad_id = os.path.basename(file)[:-4]
-        if norad_id in oneweb_NORAD_IDs:
-            df = pd.read_csv(file)
-            df['NORAD_ID'], df['constellation'] = norad_id, 'OneWeb'
-            Oneweb_dfs.append(process_ephemeris_strings(df))
-            
-        elif norad_id in starlink_NORAD_IDs:
-            df = pd.read_csv(file)
-            df['NORAD_ID'], df['constellation'] = norad_id, 'Starlink'
-            Starlink_dfs.append(process_ephemeris_strings(df))
+            if norad_id in oneweb_NORAD_IDs:
+                df = pd.read_csv(TLE_analysis_path + file)
+                df['NORAD_ID'] = norad_id
+                df['constellation'] = 'OneWeb'
+                oneweb_dfs.append(df)
 
-    return Oneweb_dfs, Starlink_dfs
+            elif norad_id in starlink_NORAD_IDs:
+                df = pd.read_csv(TLE_analysis_path + file)
+                df['NORAD_ID'] = norad_id
+                df['constellation'] = 'Starlink'
+                starlink_dfs.append(df)
+
+    for df in oneweb_dfs:
+        df['master_ephs_sup'] = df['master_ephs_sup'].apply(process_ephemeris_data)
+        df = add_latlon_to_dfs(df)
+        df = add_launch_numbers_to_df(df)
+
+    for df in starlink_dfs:
+        df['master_ephs_sup'] = df['master_ephs_sup'].apply(process_ephemeris_data)
+        df = add_latlon_to_dfs(df)
+        df = add_launch_numbers_to_df(df)
+
+    return oneweb_dfs, starlink_dfs

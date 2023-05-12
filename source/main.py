@@ -1,6 +1,6 @@
 import os
 import sys
-from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis
+from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis, TLE_analysis_to_df
 from tools.tletools import load_satellite_lists
 import cProfile
 
@@ -26,8 +26,13 @@ def main ():
     OW_norads = [str(i) for i in OW_norads]
 
     all_norads = SL_norads + OW_norads
+    print(all_norads)
+    # Unhash to run the analysis
+    # NORAD_vs_SUP_TLE_analysis(NORADS = all_norads)
 
-    NORAD_vs_SUP_TLE_analysis(NORADS = all_norads)
+    Oneweb_dfs, Starlink_dfs = TLE_analysis_to_df()
+
+    print("columns: ", Oneweb_dfs[0].columns)
 
 if __name__ == "__main__":
     main()
