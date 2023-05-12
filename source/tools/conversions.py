@@ -151,10 +151,10 @@ def alt_series(ephemeris):
 
     alts = []
     for i in range(0, len(ephemeris), 1):
-        r_vec = ephemeris[i][1]
-        r_mag = np.abs(np.linalg.norm(r_vec))
-        alt = r_mag-Re
-        alts.append(alt)
+        r_vec = ephemeris[i][1] #position vector
+        r_mag = np.abs(np.linalg.norm(r_vec)) #magnitude of position vector
+        alt = r_mag-Re #altitude
+        alts.append(alt) #add altitude to list
 
     return alts
 
