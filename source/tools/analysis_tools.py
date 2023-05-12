@@ -67,7 +67,6 @@ def master_sgp4_ephemeris(start_date, stop_date, master_TLE, update = True, dt =
         if jd_start > jd_stop:
             print('The start date is later than the stop date')
             print('Please check the start and stop dates')
-            
             return
     
     if update == False: # this does not update the ephermeris with each new TLE
@@ -134,8 +133,6 @@ def master_sgp4_ephemeris_optimized(start_date, stop_date, master_TLE, update = 
 
     return master_ephemeris, orbit_ages
 
-
-
 def TLE_pair_analyse(pair_TLE_list, plot=False, savepath = '/home/charlesc/Documents/GitHub/Astrodynamics/source/propagation/results/images/TLE_compare/'):
     
     """Takes an input two lists of TLEs. For the common time period over which there are TLEs in the list, the TLEs of each list will be propagated using the SGP4 propagator.
@@ -180,13 +177,8 @@ def TLE_pair_analyse(pair_TLE_list, plot=False, savepath = '/home/charlesc/Docum
     end_month = (int(str(jd_to_utc(newend))[5:7]))
     end_day = (int(str(jd_to_utc(newend))[8:10]))
 
-    print('Start date: ', start_year, start_month, start_day)
-    print('End date: ', end_year, end_month, end_day)
-
     #generate master ephemeris for the time period
-    print('Generating master ephemeris for the time period')
     master_ephs, orbit_ages = master_sgp4_ephemeris([start_year, start_month, start_day, 0, 0, 0], [end_year,end_month, end_day, 0, 0, 0], pair_TLE_list)
-    print('Master ephemeris generated')
 
     # Extract position, times and velocities into arrays
     positions = np.zeros_like(master_ephs, dtype=object) # array of the same shape as master_ephs but filled with zeros
@@ -224,20 +216,15 @@ def TLE_pair_analyse(pair_TLE_list, plot=False, savepath = '/home/charlesc/Docum
             pos_vel_vecs.append(posvel_group)
         pos_vels[i] = pos_vel_vecs
 
-        cart_rmse = rmse(cart_pos_diffs)
-
     # Project into HCL 
     h_diffs, c_diffs, l_diffs = HCL_diff(pos_vels[0], pos_vels[1])
 
-    #altitude time series for both 
-    eph_alts = []
-    for i in range(0, len(master_ephs), 1):
-        alts = alt_series(master_ephs[i])
-        eph_alts.append(alts)
+    #altitude time series for each ephemeris in the amster ephemeris
+    eph_alts = [alt_series(ephemeris) for ephemeris in master_ephs]
         
-        return master_ephs,eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times, orbit_ages
+    return master_ephs,eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times, orbit_ages
 
-def NORAD_vs_SUP_TLE_analysis(NORADS = [], analysis_output_path = 'output/TLE_analysis'):
+def NORAD_vs_SUP_TLE_analysis(NORADS = [], analysis_output_path = 'output/TLE_analysis/'):
 
     """Analyzes the quality of NORAD and Operator based orbits (propagated using SGP4).
        Will search each folder for mathching NORAD IDs and then compare the TLEs by propagating them using SGP4, and updating them as soon as a new TLE is available.
@@ -286,13 +273,11 @@ def NORAD_vs_SUP_TLE_analysis(NORADS = [], analysis_output_path = 'output/TLE_an
                     #combine the TLEs into a list 
                     sup_NORAD_pair = [sup_read, NORAD_read]
                     #Analyse the differences 
-                    print('Analyzing TLEs')
                     master_ephs, eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times, orbit_ages = TLE_pair_analyse(sup_NORAD_pair)
-                    print('Saving analysis to:', total_out_path)
                     # Make pandas dataframe and save into csv
+
                     df = pd.DataFrame({'h_diffs': h_diffs, 'c_diffs': c_diffs, 'l_diffs': l_diffs, 'cart_pos_diffs': cart_pos_diffs, 'times': times, 'eph_alts_sup': eph_alts[0], 'eph_alts_norad': eph_alts[1], 'master_ephs_sup': master_ephs[0], 'master_ephs_norad': master_ephs[1], 'orbit_ages_sup': orbit_ages[0], 'orbit_ages_norad': orbit_ages[1]})
                     df.to_csv(total_out_path)
-
 
 def process_ephemeris_strings(df):
     """Convert ephemeris strings in a dataframe to a list of floats."""

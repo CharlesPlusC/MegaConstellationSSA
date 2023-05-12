@@ -22,9 +22,8 @@ norad_SL_L36 = satellite_lists["starlink"]["L36"]
 SL_norads = norad_SL_L28
 #convert the list of ints to strings for the function
 SL_norads = [str(i) for i in SL_norads]
+# print(SL_norads)
 # OW_norads = [str(i) for i in OW_norads]
 
-print(SL_norads)
-
-cProfile.run(NORAD_vs_SUP_TLE_analysis(NORADS = ['48439'])) #run the function on the SL satellites
+cProfile.run("NORAD_vs_SUP_TLE_analysis(NORADS = ['48430'])") #run the function on the SL satellites
 # NORAD_vs_SUP_TLE_analysis(NORADS = OW_norads) #run the function on the OW satellites

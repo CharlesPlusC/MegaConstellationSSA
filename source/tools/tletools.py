@@ -173,7 +173,7 @@ def process_satellite_data(output, folder_path, s):
             f.write(spacetrack_dict['TLE_LINE1'] + '\n' + spacetrack_dict['TLE_LINE2'] + '\n')
         f.close()# Process the TLE data and write it to the file
 
-def tle_convert(tle_dict, display=False):
+def tle_convert(tle_dict):
     """
     Converts a TLE dictionary into the corresponding keplerian elements
     
@@ -243,15 +243,6 @@ def tle_convert(tle_dict, display=False):
 
     # Dictionary of Keplerian elements
     keplerian_dict = {'a': a, 'e': e, 'i': inclination, 'RAAN': RAAN, 'arg_p': arg_p, 'true_anomaly': np.degrees(true_anomaly)}
-    if display == True:
-        print("Keplerian Elements:")
-        print("a = {:.2f} km".format(keplerian_dict['a']))
-        print("e = {:.2f}".format(keplerian_dict['e']))
-        print("i = {:.2f} deg".format(np.degrees(keplerian_dict['i'])))
-        print("RAAN = {:.2f} deg".format(np.degrees(keplerian_dict['RAAN'])))
-        print("arg_p = {:.2f} deg".format(np.degrees(keplerian_dict['arg_p'])))
-        print("true_anomaly = {:.2f} deg".format(np.degrees(keplerian_dict['true_anomaly'])))
-
     return keplerian_dict
 
 def download_tle_history(NORAD_ids, constellation, folder_path="external/NORAD_TLEs"):
@@ -429,9 +420,8 @@ def sgp4_prop_TLE(TLE, jd_start, jd_end, dt, alt_series = False):
 
     return ephemeris
 
-
-def combine_TLE2eph(TLE_list,jd_start,jd_stop, dt=(15*60)):
-    """ Takes a list of TLES a returns an ephemeris that updates with each new TLE. Outputs a position and velocity every 15 minutes from the hour.
+def combine_TLE2eph(TLE_list, jd_start, jd_stop, dt=(15 * 60)):
+    """Takes a list of TLEs and returns an ephemeris that updates with each new TLE. Outputs a position and velocity every 15 minutes from the hour.
     Args:
         TLE_list (list): list of TLEs (use read_TLEs function to generate this)
         jd_start (float): start time in JD
@@ -439,46 +429,31 @@ def combine_TLE2eph(TLE_list,jd_start,jd_stop, dt=(15*60)):
         dt (float): time step in seconds
     Returns:
         ephemeris (array): ephemeris of the satellite in ECI coordinates(time, pos, vel)
-        """
-    #Given a list of TLEs return an ephemeris that is updated with the TLE
-    #default dt is 15 minutes
-    #propagated with sgp4
-    dt_jd = dt/86400
-    current_jd = jd_start #this should be the midnight of the day you want to start
-    #number of steps
-    n_steps = int((jd_stop - jd_start)/dt_jd)
-    #t since update
-    orbit_ages = []
+    """
+    dt_jd = dt / 86400
+    current_jd = jd_start
+    n_steps = int((jd_stop - jd_start) / dt_jd)
     ephemeris = []
-    while current_jd < jd_stop:
-        print(current_jd)
-        #loop through the TLEs
-        for i in range(0, len(TLE_list), 1):
-            #get the time of the current TLE
-            TLE_jd = TLE_time(TLE_list[i])
-            #get the time of the next TLE
-            if i == len(TLE_list)-1:
-                next_TLE_jd = TLE_time(TLE_list[0])
-            else:
-                next_TLE_jd = TLE_time(TLE_list[i+1])
-            #if the current jd is between the current TLE and the next TLE, use the current TLE
-            if current_jd > TLE_jd and current_jd < next_TLE_jd:
-                #get the ephemeris of the satellite
-                eph = sgp4_prop_TLE(TLE_list[i], current_jd, (current_jd+dt_jd), dt=dt) #prop for one step 
-                #append the contents of eph to the ephemeris
-                ephemeris.extend(eph)
-                #increment the current jd
-                current_jd += dt_jd
-                #increment the time since update
-                jd_orbit_age = current_jd - TLE_jd
-                # convert from julian days to hours
-                hours_orbit_age = jd_orbit_age*24
-                orbit_ages.append(hours_orbit_age)
-            elif current_jd > jd_stop:
-                print("prop time is greater than stop time. Stopping propagation.")
-                break  
+    orbit_ages = []
 
-    # chop the ephemeris to be the correct number of steps using the n_steps variable (stops lists being 1 too long due to Python indexing)
-    ephemeris = ephemeris[0:n_steps]
-    orbit_ages = orbit_ages[0:n_steps]
+    # Keep track of the current TLE index
+    current_tle_idx = 0
+
+    while current_jd < jd_stop:
+        for i in range(current_tle_idx, len(TLE_list)):
+            TLE_jd = TLE_time(TLE_list[i])
+            next_TLE_jd = TLE_time(TLE_list[i + 1]) if i < len(TLE_list) - 1 else TLE_time(TLE_list[0])
+
+            if TLE_jd < current_jd < next_TLE_jd:
+                eph = sgp4_prop_TLE(TLE_list[i], current_jd, (current_jd + dt_jd), dt=dt)
+                ephemeris.extend(eph)
+                current_jd += dt_jd
+                hours_orbit_age = (current_jd - TLE_jd) * 24
+                orbit_ages.append(hours_orbit_age)
+                current_tle_idx = i  # Update the TLE index
+                break
+
+    ephemeris = ephemeris[:n_steps]
+    orbit_ages = orbit_ages[:n_steps]
+
     return ephemeris, orbit_ages
