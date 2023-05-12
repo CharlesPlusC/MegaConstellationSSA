@@ -1,7 +1,7 @@
 import os
 import sys
 from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis
-from tools.tletools import NORAD_TLE_History, load_satellite_lists
+from tools.tletools import load_satellite_lists
 
 # load the satellite lists from the source/satellite_lists.json file
 satellite_lists = load_satellite_lists()
@@ -25,5 +25,5 @@ OW_norads = [str(i) for i in OW_norads]
 
 print(SL_norads)
 
-# NORAD_vs_SUP_TLE_analysis(NORADS = SL_norads) #run the function on the SL satellites
+NORAD_vs_SUP_TLE_analysis(NORADS = SL_norads) #run the function on the SL satellites
 # NORAD_vs_SUP_TLE_analysis(NORADS = OW_norads) #run the function on the OW satellites
