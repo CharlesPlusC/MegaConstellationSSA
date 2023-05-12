@@ -8,8 +8,8 @@ import numpy as np
 import datetime
 
 #local imports
-from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE
-from .conversions import jd_to_utc, kep2car, utc_jd_date, midnight_jd_date
+from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph
+from .conversions import jd_to_utc, kep2car, utc_jd_date, midnight_jd_date, HCL_diff, dist_3d, alt_series
 
 rmse = lambda x: np.sqrt(np.mean(np.square(x)))
 
@@ -207,8 +207,8 @@ def NORAD_vs_SUP_TLE_analysis(NORADS = [], analysis_output_path = 'output/TLE_an
         analysis_output_path (str): path to a folder where the analysis will be saved. One CSV file will be created for each NORAD ID.
      """
 
-    NORAD_TLE_folder = 'external/NORAD_TLEs'
-    SUP_TLE_folder = 'external/SUP_TLEs'
+    NORAD_TLE_folder = 'external/NORAD_TLEs/'
+    SUP_TLE_folder = 'external/SUP_TLEs/'
 
     NORAD_TLE_files = os.listdir(NORAD_TLE_folder)
     SUP_TLE_files = os.listdir(SUP_TLE_folder)
