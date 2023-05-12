@@ -31,3 +31,4 @@ def main ():
 
 if __name__ == "__main__":
     main()
+    print("number of files generated during analysis: ", len(os.listdir("output/TLE_analysis")))
