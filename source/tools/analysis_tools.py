@@ -6,6 +6,7 @@ import re
 import pandas as pd
 import numpy as np
 import datetime
+import glob
 
 #local imports
 from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph
@@ -69,7 +70,7 @@ def master_sgp4_ephemeris(start_date, stop_date, master_TLE, update = True, dt =
             
             return
     
-    if update == False:
+    if update == False: # this does not update the ephermeris with each new TLE
         #make an empty array of the same shape as master_TLE called master_ephemeris
         master_ephemeris = np.empty_like(master_TLE, dtype=object)
         
@@ -82,7 +83,7 @@ def master_sgp4_ephemeris(start_date, stop_date, master_TLE, update = True, dt =
             prop = sgp4_prop_TLE(single_TLE, jd_start, jd_stop, dt) # propagate the TLE over the selected time period 
             master_ephemeris[sc][tle] = prop #fill in the relevant spot in the master ephemeris array
         
-    elif update == True:
+    elif update == True: # this updates the ephemeris with each new TLE
         ## Another loop that combines the ephemerides for the most recent TLEs into a single ephemeris for each spacecraft
         master_ephemeris = np.zeros(len(master_TLE), dtype=object)
         orbit_ages = np.zeros(len(master_TLE), dtype=object)
@@ -94,6 +95,45 @@ def master_sgp4_ephemeris(start_date, stop_date, master_TLE, update = True, dt =
             orbit_ages[sc] = SC_orbit_ages
 
     return master_ephemeris, orbit_ages
+
+def master_sgp4_ephemeris_optimized(start_date, stop_date, master_TLE, update = True, dt = 15*60):
+    jd_start = utc_jd_date(start_date[2], start_date[1], start_date[0], 0, 0, 0) 
+    jd_stop = utc_jd_date(stop_date[2], stop_date[1], stop_date[0], 0, 0, 0) 
+
+    # Compute TLE times once and store them
+    TLE_times = [[TLE_time(TLE) for TLE in SC_TLEs] for SC_TLEs in master_TLE]
+
+    for sc, SC_TLEs in enumerate(master_TLE):
+        first_SC_TLEs_time = TLE_times[sc][0] 
+        last_SC_TLEs_time = TLE_times[sc][-1] 
+
+        if jd_start < first_SC_TLEs_time:
+            jd_current_time = first_SC_TLEs_time
+            jd_dt = datetime.datetime(1858, 11, 17) + datetime.timedelta(jd_current_time - 2400000.5)
+            jd_start = midnight_jd_date(jd_dt.day, jd_dt.month, jd_dt.year)
+
+        if jd_stop > last_SC_TLEs_time:
+            jd_current_time = last_SC_TLEs_time
+            jd_dt = datetime.datetime(1858, 11, 17) + datetime.timedelta(jd_current_time - 2400000.5)
+            jd_stop = midnight_jd_date(jd_dt.day, jd_dt.month, jd_dt.year)
+        
+    if jd_start > jd_stop:
+        print('The start date is later than the stop date')
+        print('Please check the start and stop dates')
+        return
+
+    master_ephemeris = np.empty_like(master_TLE, dtype=object) if not update else np.zeros(len(master_TLE), dtype=object)
+    orbit_ages = np.zeros(len(master_TLE), dtype=object)
+
+    for sc, SC_TLEs in enumerate(master_TLE): 
+        if update:
+            master_ephemeris[sc], orbit_ages[sc] = combine_TLE2eph(SC_TLEs, jd_start, jd_stop)
+        else:
+            for tle, single_TLE in enumerate(SC_TLEs):
+                master_ephemeris[sc][tle], _ = sgp4_prop_TLE(single_TLE, jd_start, jd_stop, dt)
+
+    return master_ephemeris, orbit_ages
+
 
 
 def TLE_pair_analyse(pair_TLE_list, plot=False, savepath = '/home/charlesc/Documents/GitHub/Astrodynamics/source/propagation/results/images/TLE_compare/'):
@@ -144,7 +184,9 @@ def TLE_pair_analyse(pair_TLE_list, plot=False, savepath = '/home/charlesc/Docum
     print('End date: ', end_year, end_month, end_day)
 
     #generate master ephemeris for the time period
+    print('Generating master ephemeris for the time period')
     master_ephs, orbit_ages = master_sgp4_ephemeris([start_year, start_month, start_day, 0, 0, 0], [end_year,end_month, end_day, 0, 0, 0], pair_TLE_list)
+    print('Master ephemeris generated')
 
     # Extract position, times and velocities into arrays
     positions = np.zeros_like(master_ephs, dtype=object) # array of the same shape as master_ephs but filled with zeros
@@ -185,7 +227,7 @@ def TLE_pair_analyse(pair_TLE_list, plot=False, savepath = '/home/charlesc/Docum
         cart_rmse = rmse(cart_pos_diffs)
 
     # Project into HCL 
-    h_diffs, c_diffs, l_diffs = HCL_diff(pos_vels[0], pos_vels[1], plot=False)
+    h_diffs, c_diffs, l_diffs = HCL_diff(pos_vels[0], pos_vels[1])
 
     #altitude time series for both 
     eph_alts = []
@@ -230,25 +272,65 @@ def NORAD_vs_SUP_TLE_analysis(NORADS = [], analysis_output_path = 'output/TLE_an
                 NORAD_NORAD = NORAD_id
                 SUP_NORAD = SUP_id
                 if NORAD_NORAD == SUP_NORAD:
-                    print('Match found for NORAD ID:', NORAD_NORAD)
+                    print('A NORAD/SUP TLE pair was found for NORAD ID:', NORAD_NORAD[0])
                     filename = str(NORAD_NORAD[0]) + '.csv'
                     total_out_path = analysis_output_path + filename
                     #set the paths to the files
                     NORAD_TLE_path = NORAD_TLE_folder + NORAD_file
                     SUP_TLE_path = SUP_TLE_folder + SUP_file
                     #Read the TLEs
+                    print('Reading SUP TLEs')
                     sup_read = read_TLEs(SUP_TLE_path)
-                    print('SUP TLEs read')
+                    print('Reading NORAD TLEs')
                     NORAD_read = read_TLEs(NORAD_TLE_path)
-                    print('NORAD TLEs read')
-
                     #combine the TLEs into a list 
                     sup_NORAD_pair = [sup_read, NORAD_read]
-                    
-                    #Run the comparison function
+                    #Analyse the differences 
+                    print('Analyzing TLEs')
                     master_ephs, eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times, orbit_ages = TLE_pair_analyse(sup_NORAD_pair)
-
+                    print('Saving analysis to:', total_out_path)
                     # Make pandas dataframe and save into csv
                     df = pd.DataFrame({'h_diffs': h_diffs, 'c_diffs': c_diffs, 'l_diffs': l_diffs, 'cart_pos_diffs': cart_pos_diffs, 'times': times, 'eph_alts_sup': eph_alts[0], 'eph_alts_norad': eph_alts[1], 'master_ephs_sup': master_ephs[0], 'master_ephs_norad': master_ephs[1], 'orbit_ages_sup': orbit_ages[0], 'orbit_ages_norad': orbit_ages[1]})
-
                     df.to_csv(total_out_path)
+
+
+def process_ephemeris_strings(df):
+    """Convert ephemeris strings in a dataframe to a list of floats."""
+    for i in range(len(df['master_ephs_sup'])):
+        eph_str = df['master_ephs_sup'][i].split(' ')
+        eph_time, pos1, pos2, pos3, vel1, vel2, vel3 = map(float, eph_str)
+        df.at[i, 'master_ephs_sup'] = [eph_time, pos1, pos2, pos3, vel1, vel2, vel3]
+    return df
+
+def TLE_analysis_to_df(NORADS=[]):
+    """
+    Takes the analysis files in the TLE_analysis folder and turn them into pandas dataframes.
+    Uses the NORAD IDs in the NORAD ID text files to decide which dataframe to put the data from the TLE analysis files into.
+
+    Args:
+        NORADS (list): List of NORAD IDs. 
+
+    Returns:
+        tuple: Tuple containing two lists of pandas dataframes.
+    """
+    TLE_analysis_path = "output/TLE_analysis/"
+    TLE_analysis_files = [f for f in glob.glob(os.path.join(TLE_analysis_path, "*.csv")) if str(NORADS) in f] if NORADS else glob.glob(os.path.join(TLE_analysis_path, "*.csv"))
+
+    oneweb_NORAD_IDs = set(open('external/Constellation_NORAD_IDs/oneweb_NORAD_IDs.txt', 'r').read().splitlines())
+    starlink_NORAD_IDs = set(open('external/Constellation_NORAD_IDs/starlink_NORAD_IDs.txt', 'r').read().splitlines())
+
+    Oneweb_dfs, Starlink_dfs = [], []
+
+    for file in TLE_analysis_files:
+        norad_id = os.path.basename(file)[:-4]
+        if norad_id in oneweb_NORAD_IDs:
+            df = pd.read_csv(file)
+            df['NORAD_ID'], df['constellation'] = norad_id, 'OneWeb'
+            Oneweb_dfs.append(process_ephemeris_strings(df))
+            
+        elif norad_id in starlink_NORAD_IDs:
+            df = pd.read_csv(file)
+            df['NORAD_ID'], df['constellation'] = norad_id, 'Starlink'
+            Starlink_dfs.append(process_ephemeris_strings(df))
+
+    return Oneweb_dfs, Starlink_dfs

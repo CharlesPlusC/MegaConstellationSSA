@@ -10,7 +10,7 @@ import time
 import requests
 import numpy as np
 from sgp4.api import Satrec
-from datetime import datetime, timedelta
+import datetime
 
 #local imports
 from .conversions import kep2car
@@ -71,6 +71,90 @@ def get_satellite_data(session, uriBase, requestCmdAction, requestOMMStarlink1, 
         raise Exception("GET fail on request for satellite " + s)
 
     return resp.text
+
+def NORAD_list_update(constellation, out_path = 'external/Constellation_NORAD_IDs/'):
+    """From spacetrack API, get the list of all available NORAD IDs for a given constellation. Add them to a text file
+
+    Args:
+        constellation (str): constellation name. Select from: 'starlink', 'oneweb'. #TODO: add more constellations
+        out_path (str, optional): Path to output textfile to. Defaults to None. If None, will use default Constellation_NORAD_IDs folder.
+
+    Raises:
+        ValueError: Invalid constellation name. Select one of: ['starlink', 'oneweb']
+
+    Returns:
+        list: list of the NORAD IDs that were returned from query 
+    """    # See https://www.space-track.org/documentation for details on REST queries
+
+    available_constellations = ['starlink','oneweb']
+    if constellation not in available_constellations:
+        raise ValueError("Invalid constellation name. Select one of: %s" % available_constellations)
+
+    #navigate to the folder
+    if constellation == 'oneweb':
+        out_path = '/home/charlesc/Documents/GitHub/Astrodynamics/source/propagation/results/data/Constellation_NORAD_IDs/oneweb_NORAD_IDs.txt'
+    elif constellation == 'starlink':
+        out_path = '/home/charlesc/Documents/GitHub/Astrodynamics/source/propagation/results/data/Constellation_NORAD_IDs/starlink_NORAD_IDs.txt'
+    print("NORAD list output path: ", out_path)
+
+    uriBase = "https://www.space-track.org"
+    requestLogin = "/ajaxauth/login"
+    requestCmdAction = "/basicspacedata/query"
+    if constellation == 'oneweb':
+        requestFindOWs = "/class/tle_latest/NORAD_CAT_ID/>40000/ORDINAL/1/OBJECT_NAME/ONEWEB~~/format/tle/orderby/NORAD_CAT_ID%20asc"
+    elif constellation == 'starlink':
+        requestFindOWs = "/class/tle_latest/NORAD_CAT_ID/>40000/ORDINAL/1/OBJECT_NAME/Starlink~~/format/tle/orderby/NORAD_CAT_ID%20asc"
+
+    # Find credentials for the SpaceTrack API
+    
+    username, password = SpaceTrack_authenticate()
+    siteCred = {'identity': username, 'password': password}
+
+    with open(out_path, "w") as f:
+        # use requests package to drive the RESTful
+        # session with space-track.org
+
+        with requests.Session() as session:
+            # run the session in a with block to
+            # force session to close if we exit
+
+            # need to log in first. note that we get a 200
+            # to say the web site got the data, not that we are logged in
+            resp = session.post(uriBase + requestLogin, data=siteCred)
+            if resp.status_code != 200:
+                raise MyError(resp, "POST fail on login")
+
+            # this query picks up all OneWeb satellites from the catalog.
+            # Note - a 401 failure shows you have bad credentials
+            resp = session.get(uriBase + requestCmdAction + requestFindOWs)
+            if resp.status_code != 200:
+                raise MyError(
+                    resp, "GET fail on request for satellites"
+                )
+
+            output = resp.text
+
+        NORAD_ids = []
+        f.write("last updated: " + str(datetime.now()) + "\n")
+        
+        # split the output into lines
+        all_lines = output.splitlines()
+        # put every two lines into a list
+        line_pairs = [
+            all_lines[i:i + 2] for i in range(0, len(all_lines), 2)
+        ]
+
+        for tle in range(0, len(line_pairs), 1):
+            line_one, line_two = line_pairs[tle][0], line_pairs[tle][1]
+
+            tle_dict = {}
+
+            # Parse the first line
+            tle_dict["line number"] = line_one[0]
+            tle_dict["satellite catalog number"] = line_one[2:7]
+            f.write(tle_dict["satellite catalog number"] + "\n")
+            NORAD_ids.append(tle_dict["satellite catalog number"])
+    return NORAD_ids
 
 def process_satellite_data(output, folder_path, s):
     # Process the TLE data and write it to the file that is named after its NORAD ID
@@ -367,6 +451,7 @@ def combine_TLE2eph(TLE_list,jd_start,jd_stop, dt=(15*60)):
     orbit_ages = []
     ephemeris = []
     while current_jd < jd_stop:
+        print(current_jd)
         #loop through the TLEs
         for i in range(0, len(TLE_list), 1):
             #get the time of the current TLE
@@ -391,7 +476,7 @@ def combine_TLE2eph(TLE_list,jd_start,jd_stop, dt=(15*60)):
                 orbit_ages.append(hours_orbit_age)
             elif current_jd > jd_stop:
                 print("prop time is greater than stop time. Stopping propagation.")
-            break  
+                break  
 
     # chop the ephemeris to be the correct number of steps using the n_steps variable (stops lists being 1 too long due to Python indexing)
     ephemeris = ephemeris[0:n_steps]

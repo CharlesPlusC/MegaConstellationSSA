@@ -2,6 +2,7 @@ import os
 import sys
 from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis
 from tools.tletools import load_satellite_lists
+import cProfile
 
 # load the satellite lists from the source/satellite_lists.json file
 satellite_lists = load_satellite_lists()
@@ -16,14 +17,14 @@ norad_SL_L30 = satellite_lists["starlink"]["L30"]
 norad_SL_L36 = satellite_lists["starlink"]["L36"]
 
 #merge the lists above into constellation-wide lists
-SL_norads = norad_SL_L28 + norad_SL_L36 + norad_SL_L30
-OW_norads = norad_OW_L4 + norad_OW_L5 + norad_OW_L6
-
+# SL_norads = norad_SL_L28 + norad_SL_L36 + norad_SL_L30
+# OW_norads = norad_OW_L4 + norad_OW_L5 + norad_OW_L6
+SL_norads = norad_SL_L28
 #convert the list of ints to strings for the function
 SL_norads = [str(i) for i in SL_norads]
-OW_norads = [str(i) for i in OW_norads]
+# OW_norads = [str(i) for i in OW_norads]
 
 print(SL_norads)
 
-NORAD_vs_SUP_TLE_analysis(NORADS = SL_norads) #run the function on the SL satellites
+cProfile.run(NORAD_vs_SUP_TLE_analysis(NORADS = ['48439'])) #run the function on the SL satellites
 # NORAD_vs_SUP_TLE_analysis(NORADS = OW_norads) #run the function on the OW satellites

@@ -1,7 +1,7 @@
 """
 If you wish to re-download the TLEs, run this script.
 """
-from tools.tletools import download_tle_history, load_satellite_lists
+from tools.tletools import download_tle_history, load_satellite_lists, NORAD_list_update
 
 # load the satellite lists from the source/satellite_lists.json file
 satellite_lists = load_satellite_lists()
@@ -18,6 +18,10 @@ norad_SL_L36 = satellite_lists["starlink"]["L36"]
 #merge the lists above into constellation-wide lists
 SL_norads = norad_SL_L28 + norad_SL_L36 + norad_SL_L30
 OW_norads = norad_OW_L4 + norad_OW_L5 + norad_OW_L6
+
+# download the list of NORAD IDs for the specified constellations
+NORAD_list_update('oneweb')
+NORAD_list_update('starlink')
 
 # fetch the available TLE archive for the specified NORAD IDs
 download_tle_history(SL_norads, 'starlink') 
