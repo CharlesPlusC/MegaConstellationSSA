@@ -7,10 +7,11 @@ import pandas as pd
 import numpy as np
 import datetime
 import glob
+from multiprocessing import Pool
 
 #local imports
 from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph
-from .conversions import jd_to_utc, kep2car, utc_jd_date, midnight_jd_date, HCL_diff, dist_3d, alt_series
+from .conversions import jd_to_utc, utc_jd_date, midnight_jd_date, HCL_diff, dist_3d, alt_series
 
 rmse = lambda x: np.sqrt(np.mean(np.square(x)))
 
@@ -133,7 +134,7 @@ def master_sgp4_ephemeris_optimized(start_date, stop_date, master_TLE, update = 
 
     return master_ephemeris, orbit_ages
 
-def TLE_pair_analyse(pair_TLE_list, plot=False, savepath = '/home/charlesc/Documents/GitHub/Astrodynamics/source/propagation/results/images/TLE_compare/'):
+def TLE_pair_analyse(pair_TLE_list):
     
     """Takes an input two lists of TLEs. For the common time period over which there are TLEs in the list, the TLEs of each list will be propagated using the SGP4 propagator.
        A state vector [Julian Day, (x-eci, y-eci, z-eci),(u-eci, v-eci, w-eci)] will be output every 15 minutes for each spacecraft from midnight beggining on the first day of the available common time period of the provided TLE lists.
@@ -156,10 +157,6 @@ def TLE_pair_analyse(pair_TLE_list, plot=False, savepath = '/home/charlesc/Docum
     """
     tlelist1 = pair_TLE_list[0]
     tlelist2 = pair_TLE_list[1]
-
-    #Extract the NORAD ID of both the TLEs by parsing the first line of each of them
-    norad1 = tlelist1[0][2:7]
-    norad2 = tlelist2[0][2:7]
 
     #find the time period which is common to both TLE lists
     start = max(TLE_time(tlelist1[0]), TLE_time(tlelist2[0]))
@@ -224,18 +221,34 @@ def TLE_pair_analyse(pair_TLE_list, plot=False, savepath = '/home/charlesc/Docum
         
     return master_ephs,eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times, orbit_ages
 
+def analyze_files(args):
+    NORAD_file, SUP_file, NORAD_TLE_folder, SUP_TLE_folder, analysis_output_path = args
+    #extract the numerical values from NORAD_file and SUP_file
+    NORAD_id = re.findall(r'\d+', NORAD_file)
+    SUP_id = re.findall(r'\d+', SUP_file) 
+    NORAD_NORAD = NORAD_id
+    SUP_NORAD = SUP_id
+    if NORAD_NORAD == SUP_NORAD:
+        print('A NORAD/SUP TLE pair was found for NORAD ID:', NORAD_NORAD[0])
+        filename = str(NORAD_NORAD[0]) + '.csv'
+        total_out_path = analysis_output_path + filename
+        #set the paths to the files
+        NORAD_TLE_path = NORAD_TLE_folder + NORAD_file
+        SUP_TLE_path = SUP_TLE_folder + SUP_file
+        #Read the TLEs
+        print('Reading SUP TLEs')
+        sup_read = read_TLEs(SUP_TLE_path)
+        print('Reading NORAD TLEs')
+        NORAD_read = read_TLEs(NORAD_TLE_path)
+        #combine the TLEs into a list 
+        sup_NORAD_pair = [sup_read, NORAD_read]
+        #Analyse the differences 
+        master_ephs, eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times, orbit_ages = TLE_pair_analyse(sup_NORAD_pair)
+        # Make pandas dataframe and save into csv
+        df = pd.DataFrame({'h_diffs': h_diffs, 'c_diffs': c_diffs, 'l_diffs': l_diffs, 'cart_pos_diffs': cart_pos_diffs, 'times': times, 'eph_alts_sup': eph_alts[0], 'eph_alts_norad': eph_alts[1], 'master_ephs_sup': master_ephs[0], 'master_ephs_norad': master_ephs[1], 'orbit_ages_sup': orbit_ages[0], 'orbit_ages_norad': orbit_ages[1]})
+        df.to_csv(total_out_path)
+
 def NORAD_vs_SUP_TLE_analysis(NORADS = [], analysis_output_path = 'output/TLE_analysis/'):
-
-    """Analyzes the quality of NORAD and Operator based orbits (propagated using SGP4).
-       Will search each folder for mathching NORAD IDs and then compare the TLEs by propagating them using SGP4, and updating them as soon as a new TLE is available.
-       Every 15 minutes, the height cross track and along track differences are recorded. The ephemerides are also recorded.
-
-    Args:
-        TLE_source1_path (str): path to a folder containing TLEs from the first source
-        TLE_source2_path (str): path to a folder containing TLEs from the second source
-        analysis_output_path (str): path to a folder where the analysis will be saved. One CSV file will be created for each NORAD ID.
-     """
-
     NORAD_TLE_folder = 'external/NORAD_TLEs/'
     SUP_TLE_folder = 'external/SUP_TLEs/'
 
@@ -245,39 +258,13 @@ def NORAD_vs_SUP_TLE_analysis(NORADS = [], analysis_output_path = 'output/TLE_an
     if NORADS == []:
         raise ValueError('Please specify a list of NORAD IDs to analyze')
     else:
-        #if a specific NORAD ID is specified, then find the norad TLE files that correspond to those NORAD IDs
         NORAD_TLE_files = [file for file in NORAD_TLE_files if file.startswith(tuple(NORADS))]
-        # find the files in SUP_TLE_files that correspond to the NORAD IDs with a 'SUP' prefix
         SUP_TLE_files = [file for file in SUP_TLE_files if file.startswith(tuple(['sup_' + NORAD for NORAD in NORADS]))]
-        #find the files with the same NORAD ID
 
-        for NORAD_file in NORAD_TLE_files:
-            for SUP_file in SUP_TLE_files:
-                #extract the numerical values from NORAD_file and SUP_file
-                NORAD_id = re.findall(r'\d+', NORAD_file)
-                SUP_id = re.findall(r'\d+', SUP_file) 
-                NORAD_NORAD = NORAD_id
-                SUP_NORAD = SUP_id
-                if NORAD_NORAD == SUP_NORAD:
-                    print('A NORAD/SUP TLE pair was found for NORAD ID:', NORAD_NORAD[0])
-                    filename = str(NORAD_NORAD[0]) + '.csv'
-                    total_out_path = analysis_output_path + filename
-                    #set the paths to the files
-                    NORAD_TLE_path = NORAD_TLE_folder + NORAD_file
-                    SUP_TLE_path = SUP_TLE_folder + SUP_file
-                    #Read the TLEs
-                    print('Reading SUP TLEs')
-                    sup_read = read_TLEs(SUP_TLE_path)
-                    print('Reading NORAD TLEs')
-                    NORAD_read = read_TLEs(NORAD_TLE_path)
-                    #combine the TLEs into a list 
-                    sup_NORAD_pair = [sup_read, NORAD_read]
-                    #Analyse the differences 
-                    master_ephs, eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times, orbit_ages = TLE_pair_analyse(sup_NORAD_pair)
-                    # Make pandas dataframe and save into csv
-
-                    df = pd.DataFrame({'h_diffs': h_diffs, 'c_diffs': c_diffs, 'l_diffs': l_diffs, 'cart_pos_diffs': cart_pos_diffs, 'times': times, 'eph_alts_sup': eph_alts[0], 'eph_alts_norad': eph_alts[1], 'master_ephs_sup': master_ephs[0], 'master_ephs_norad': master_ephs[1], 'orbit_ages_sup': orbit_ages[0], 'orbit_ages_norad': orbit_ages[1]})
-                    df.to_csv(total_out_path)
+        # Create a pool of workers
+        with Pool() as pool:
+            # Use starmap to apply the analyze_files function to each pair of NORAD and SUP files
+            pool.map(analyze_files, [(NORAD_file, SUP_file, NORAD_TLE_folder, SUP_TLE_folder, analysis_output_path) for NORAD_file in NORAD_TLE_files for SUP_file in SUP_TLE_files])
 
 def process_ephemeris_strings(df):
     """Convert ephemeris strings in a dataframe to a list of floats."""
