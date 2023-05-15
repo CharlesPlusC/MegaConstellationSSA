@@ -343,39 +343,54 @@ def add_launch_numbers_to_df(df):
     df['launch'] = launch_numbers
     return df
 
+def TLE_analysis_to_df(NORAD_IDs=None):
+    """
+    Analyze TLE (Two-Line Element Set) data and convert it to pandas DataFrame.
+    
+    This function reads TLE analysis files and categorizes them based on the constellation they belong to.
+    Each file is read into a DataFrame, which is then processed and appended to the respective list.
+    The function returns two lists of DataFrames, each corresponding to a specific constellation.
+    
+    Parameters:
+    NORAD_IDs (list, optional): List of NORAD IDs to be analyzed. If not specified, all TLE analysis files are analyzed.
 
-def TLE_analysis_to_df():
+    Returns:
+    tuple: Two lists of pandas DataFrames. The first list corresponds to the OneWeb constellation data, 
+    and the second to the Starlink constellation data.
+    """
+    
     TLE_analysis_path = "output/TLE_analysis/"
-    oneweb_NORAD_IDs = set(open('external/Constellation_NORAD_IDs/oneweb_NORAD_IDs.txt', 'r').read().splitlines())
-    starlink_NORAD_IDs = set(open('external/Constellation_NORAD_IDs/starlink_NORAD_IDs.txt', 'r').read().splitlines())
     oneweb_dfs = []
     starlink_dfs = []
+
+    oneweb_NORAD_IDs = set(open('external/Constellation_NORAD_IDs/oneweb_NORAD_IDs.txt', 'r').read().splitlines())
+    starlink_NORAD_IDs = set(open('external/Constellation_NORAD_IDs/starlink_NORAD_IDs.txt', 'r').read().splitlines())
+
+    if NORAD_IDs:
+        print("analyzing TLE analysis files for NORAD IDs: " + str(NORAD_IDs))
+        oneweb_NORAD_IDs = [x for x in NORAD_IDs if x in oneweb_NORAD_IDs]
+        starlink_NORAD_IDs = [x for x in NORAD_IDs if x in starlink_NORAD_IDs]
+    else:
+        print("no NORAD IDs specified- analyzing all TLE analysis files")
 
     for file in os.listdir(TLE_analysis_path):
         if file.endswith('.csv'):
             norad_id = file[:-4]
+            df = pd.read_csv(TLE_analysis_path + file)
+            df['NORAD_ID'] = norad_id
 
             if norad_id in oneweb_NORAD_IDs:
-                df = pd.read_csv(TLE_analysis_path + file)
-                df['NORAD_ID'] = norad_id
                 df['constellation'] = 'OneWeb'
                 oneweb_dfs.append(df)
-
             elif norad_id in starlink_NORAD_IDs:
-                df = pd.read_csv(TLE_analysis_path + file)
-                df['NORAD_ID'] = norad_id
                 df['constellation'] = 'Starlink'
                 starlink_dfs.append(df)
 
-    #Process the ephemeris data if it hasn't already been processed
-    for df in oneweb_dfs:
-        df['master_ephs_sup'] = df['master_ephs_sup'].apply(process_ephemeris_data)
-        df = add_latlon_to_dfs(df)
-        df = add_launch_numbers_to_df(df)
-
-    for df in starlink_dfs:
-        df['master_ephs_sup'] = df['master_ephs_sup'].apply(process_ephemeris_data)
-        df = add_latlon_to_dfs(df)
-        df = add_launch_numbers_to_df(df)
+    # additional processing of the dataframes
+    for dfs in [oneweb_dfs, starlink_dfs]:
+        for df in dfs:
+            df['master_ephs_sup'] = df['master_ephs_sup'].apply(process_ephemeris_data)
+            df = add_latlon_to_dfs(df)
+            df = add_launch_numbers_to_df(df)
 
     return oneweb_dfs, starlink_dfs
