@@ -5,11 +5,11 @@ Code repository accompanying the paper: On the Limits of Current Practices in Un
 1. Clone the repository
 2. Install the requirements using the megeaconst_env.yml file:
 ``` bash
-(conda env create -f megaconst_env.yml)
+conda env create -f megaconst_env.yml
 ```
 3. Activate the environment:
 ``` bash
- (conda activate megaconst)
+ conda activate megaconst
 ```
 4. If you wish to redownload the TLE data: Create a file called SLTrack.ini and put it in the root directory of the repository. The file should contain your Space-track.org username and password in the following format:
 ``` bash
