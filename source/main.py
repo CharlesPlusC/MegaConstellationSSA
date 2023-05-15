@@ -2,6 +2,7 @@ import os
 import sys
 from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis, TLE_analysis_to_df
 from tools.tletools import load_satellite_lists
+from tools.plotting_tools import plot_altitude_timeseries
 import cProfile
 
 def main ():
@@ -30,9 +31,11 @@ def main ():
     # Unhash to run the analysis
     # NORAD_vs_SUP_TLE_analysis(NORADS = all_norads)
 
-    Oneweb_dfs, Starlink_dfs = TLE_analysis_to_df(NORADS = all_norads[0:2]) # just taking the first two dataframes for speed
+    #load in the analysis data
+    Oneweb_dfs, Starlink_dfs = TLE_analysis_to_df(NORAD_IDs = all_norads[0:1]) # just taking the first two dataframes for speed
 
-    print("columns: ", Oneweb_dfs[0].columns)
+    # plot the altitude time series for the selected list of dataframes
+    plot_altitude_timeseries(Starlink_dfs, show=True)
 
 if __name__ == "__main__":
     main()

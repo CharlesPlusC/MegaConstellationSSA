@@ -343,7 +343,7 @@ def add_launch_numbers_to_df(df):
     df['launch'] = launch_numbers
     return df
 
-def TLE_analysis_to_df(NORAD_IDs=None):
+def TLE_analysis_to_df(NORAD_IDs: list = None):
     """
     Analyze TLE (Two-Line Element Set) data and convert it to pandas DataFrame.
     
@@ -360,19 +360,35 @@ def TLE_analysis_to_df(NORAD_IDs=None):
     """
     
     TLE_analysis_path = "output/TLE_analysis/"
-    oneweb_dfs = []
-    starlink_dfs = []
+    print("specified NORAD IDs: " + str(NORAD_IDs))
+
+    oneweb_dfs = [] # list of DataFrames for OneWeb satellites
+    starlink_dfs = [] # list of DataFrames for Starlink satellites
 
     oneweb_NORAD_IDs = set(open('external/Constellation_NORAD_IDs/oneweb_NORAD_IDs.txt', 'r').read().splitlines())
     starlink_NORAD_IDs = set(open('external/Constellation_NORAD_IDs/starlink_NORAD_IDs.txt', 'r').read().splitlines())
-
+    
     if NORAD_IDs:
-        print("analyzing TLE analysis files for NORAD IDs: " + str(NORAD_IDs))
+        print("Reading TLE analysis files for NORAD IDs: " + str(NORAD_IDs))
         oneweb_NORAD_IDs = [x for x in NORAD_IDs if x in oneweb_NORAD_IDs]
         starlink_NORAD_IDs = [x for x in NORAD_IDs if x in starlink_NORAD_IDs]
+        # if the NORAD ID is not in the list of NORAD IDs, then it is not in the constellation
+        # subtract identical NORAD IDs from the two lists to get the NORAD IDs that are not in the constellation
+        not_found_Onewebs = set(NORAD_IDs) - set(oneweb_NORAD_IDs)
+        not_found_Starlinks = set(NORAD_IDs) - set(starlink_NORAD_IDs)
+        # return an error if the NORAD ID is not found in either constellation
+        if not_found_Onewebs and not_found_Starlinks:
+            raise ValueError("NORAD IDs not found: " + str(not_found_Onewebs) + str(not_found_Starlinks))
     else:
         print("no NORAD IDs specified- analyzing all TLE analysis files")
+        oneweb_NORAD_IDs = set(oneweb_NORAD_IDs)
+        starlink_NORAD_IDs = set(starlink_NORAD_IDs)
 
+        if len (oneweb_NORAD_IDs) != 0:
+            print("OneWeb NORAD IDs: ", oneweb_NORAD_IDs)
+        elif len (starlink_NORAD_IDs) != 0:
+            print("Starlink NORAD IDs: " ,starlink_NORAD_IDs)
+   
     for file in os.listdir(TLE_analysis_path):
         if file.endswith('.csv'):
             norad_id = file[:-4]
