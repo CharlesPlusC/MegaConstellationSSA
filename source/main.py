@@ -26,7 +26,7 @@ def main ():
     OW_norads = [str(i) for i in OW_norads]
 
     all_norads = SL_norads + OW_norads
-    print(all_norads)
+    print("Norad IDS specified: ", all_norads)
     # Unhash to run the analysis
     # NORAD_vs_SUP_TLE_analysis(NORADS = all_norads)
 

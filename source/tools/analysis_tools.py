@@ -367,6 +367,7 @@ def TLE_analysis_to_df():
                 df['constellation'] = 'Starlink'
                 starlink_dfs.append(df)
 
+    #Process the ephemeris data if it hasn't already been processed
     for df in oneweb_dfs:
         df['master_ephs_sup'] = df['master_ephs_sup'].apply(process_ephemeris_data)
         df = add_latlon_to_dfs(df)
