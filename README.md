@@ -9,7 +9,7 @@ conda env create -f megaconst_env.yml
 ```
 3. Activate the environment:
 ``` bash
- conda activate megaconst
+ conda activate megaconst_env
 ```
 4. If you wish to redownload the TLE data: Create a file called SLTrack.ini and put it in the root directory of the repository. The file should contain your Space-track.org username and password in the following format:
 ``` bash
