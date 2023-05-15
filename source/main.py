@@ -1,6 +1,6 @@
 import os
 import sys
-from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis, TLE_analysis_to_df
+from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis, TLE_analysis_to_df, launch_specific_stats
 from tools.tletools import load_satellite_lists
 from tools.plotting_tools import plot_altitude_timeseries
 import cProfile
@@ -32,10 +32,16 @@ def main ():
     # NORAD_vs_SUP_TLE_analysis(NORADS = all_norads)
 
     #load in the analysis data
-    Oneweb_dfs, Starlink_dfs = TLE_analysis_to_df(NORAD_IDs = all_norads[0:1]) # just taking the first two dataframes for speed
+    Oneweb_dfs, Starlink_dfs = TLE_analysis_to_df(NORAD_IDs = all_norads[0:2]) # just taking the first two dataframes for speed
 
     # plot the altitude time series for the selected list of dataframes
     plot_altitude_timeseries(Starlink_dfs, show=True)
 
+    all_dfs = Oneweb_dfs + Starlink_dfs
+    # calculate the launch-specific stats and store them in .csv file
+    launch_specific_stats(all_dfs)
 if __name__ == "__main__":
-    main()
+    # main()
+    
+#   Unhash to run the profiler
+    cProfile.run('main()')

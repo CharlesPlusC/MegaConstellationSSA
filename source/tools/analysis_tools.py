@@ -8,6 +8,8 @@ import numpy as np
 import datetime
 import json
 from multiprocessing import Pool
+from typing import List
+import scipy as sp
 
 #local imports
 from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph
@@ -292,9 +294,6 @@ def process_ephemeris_data(eph_str):
     vel3 = float(vel3)
     return [eph_time, pos1, pos2, pos3, vel1, vel2, vel3]
 
-import numpy as np
-import json
-
 def add_latlon_to_dfs(df):
     """Add latitude and longitude columns to the dataframe.
        These are calculated from the ephemeris data in the dataframe.
@@ -343,6 +342,22 @@ def add_launch_numbers_to_df(df):
     df['launch'] = launch_numbers
     return df
 
+def process_TLE_analysis_file(file: str, TLE_analysis_path: str, oneweb_NORAD_IDs: set, starlink_NORAD_IDs: set) -> pd.DataFrame:
+    norad_id = file[:-4]
+    df = pd.read_csv(TLE_analysis_path + file)
+    df['NORAD_ID'] = norad_id
+
+    if norad_id in oneweb_NORAD_IDs:
+        df['constellation'] = 'OneWeb'
+    elif norad_id in starlink_NORAD_IDs:
+        df['constellation'] = 'Starlink'
+
+    df['master_ephs_sup'] = df['master_ephs_sup'].apply(process_ephemeris_data)
+    df = add_latlon_to_dfs(df)
+    df = add_launch_numbers_to_df(df)
+    
+    return df
+
 def TLE_analysis_to_df(NORAD_IDs: list = None):
     """
     Analyze TLE (Two-Line Element Set) data and convert it to pandas DataFrame.
@@ -358,16 +373,14 @@ def TLE_analysis_to_df(NORAD_IDs: list = None):
     tuple: Two lists of pandas DataFrames. The first list corresponds to the OneWeb constellation, 
     and the second to the Starlink constellation.
     """
-    
+
     TLE_analysis_path = "output/TLE_analysis/"
     print("specified NORAD IDs: " + str(NORAD_IDs))
 
-    oneweb_dfs = [] # list of DataFrames for OneWeb satellites
-    starlink_dfs = [] # list of DataFrames for Starlink satellites
-
     oneweb_NORAD_IDs = set(open('external/Constellation_NORAD_IDs/oneweb_NORAD_IDs.txt', 'r').read().splitlines())
     starlink_NORAD_IDs = set(open('external/Constellation_NORAD_IDs/starlink_NORAD_IDs.txt', 'r').read().splitlines())
-    
+    oneweb_dfs, starlink_dfs = [], []
+
     if NORAD_IDs:
         print("Reading TLE analysis files for NORAD IDs: " + str(NORAD_IDs))
         oneweb_NORAD_IDs = [x for x in NORAD_IDs if x in oneweb_NORAD_IDs]
@@ -402,12 +415,84 @@ def TLE_analysis_to_df(NORAD_IDs: list = None):
                 df['constellation'] = 'Starlink'
                 starlink_dfs.append(df)
 
-    # additional processing of the dataframes
-    for dfs in [oneweb_dfs, starlink_dfs]:
-        for df in dfs:
-            df['master_ephs_sup'] = df['master_ephs_sup'].apply(process_ephemeris_data)
-            df = add_latlon_to_dfs(df)
-            df = add_launch_numbers_to_df(df)
+    files = [file for file in os.listdir(TLE_analysis_path) if file.endswith('.csv')]
+    for file in files:
+        df = process_TLE_analysis_file(file, TLE_analysis_path, oneweb_NORAD_IDs, starlink_NORAD_IDs)
+        norad_id = file[:-4]
+        if norad_id in oneweb_NORAD_IDs:
+            oneweb_dfs.append(df)
+        elif norad_id in starlink_NORAD_IDs:
+            starlink_dfs.append(df)
 
     return oneweb_dfs, starlink_dfs
 
+def calculate_stats(df_list):
+    """Calculate the statistics for each dataframe in the list"""
+    stats = pd.DataFrame(columns=['constellation', 'launch_no', 
+                                  'mean_h_diff', 'stddev_h_diff', 'min_h_diff', 'max_h_diff', 
+                                  'mean_c_diff', 'stddev_c_diff', 'min_c_diff', 'max_c_diff', 
+                                  'mean_l_diff', 'stddev_l_diff', 'min_l_diff', 'max_l_diff', 
+                                  'mean_cart_pos_diff', 'stddev_cart_pos_diff', 'min_cart_pos_diff', 'max_cart_pos_diff'])
+
+    for df in df_list:
+        stats = stats.append(
+            {'constellation': df['constellation'].unique()[0],
+             'launch_no': df['launch'].unique()[0], 
+             'mean_h_diff': df['h_diffs'].mean(), 
+             'stddev_h_diff': df['h_diffs'].std(),  
+             'min_h_diff': df['h_diffs'].min(), 
+             'max_h_diff': df['h_diffs'].max(), 
+             'mean_c_diff': df['c_diffs'].mean(), 
+             'stddev_c_diff': df['c_diffs'].std(),  
+             'min_c_diff': df['c_diffs'].min(), 
+             'max_c_diff': df['c_diffs'].max(), 
+             'mean_l_diff': df['l_diffs'].mean(), 
+             'stddev_l_diff': df['l_diffs'].std(), 
+             'min_l_diff': df['l_diffs'].min(), 
+             'max_l_diff': df['l_diffs'].max(), 
+             'mean_cart_pos_diff': df['cart_pos_diffs'].mean(), 
+             'stddev_cart_pos_diff': df['cart_pos_diffs'].std(),  
+             'min_cart_pos_diff': df['cart_pos_diffs'].min(), 
+             'max_cart_pos_diff': df['cart_pos_diffs'].max()},
+            ignore_index=True)
+    return stats
+
+def launch_specific_stats(list_of_list_of_dfs, export=True):
+    """Take a list of lists of dataframes and return launch-specific analysis of positional differences 
+
+    Returns:
+        pd.DataFrame: Pandas dataframe containing summary statistics for each launch and each constellations
+    """
+    all_stats = []
+    for df_list in list_of_list_of_dfs:
+        stats = calculate_stats(df_list)
+        all_stats.append(stats)
+    
+    # concatenate all dataframes
+    launch_summary_stats = pd.concat(all_stats, ignore_index=True)
+
+    # convert to categorical variable and int
+    launch_summary_stats['launch_no'] = launch_summary_stats['launch_no'].astype('category')
+    launch_summary_stats['launch_no'] = launch_summary_stats['launch_no'].astype('int')
+
+    # groupby constellation and launch_no. 
+    launch_summary_stats = launch_summary_stats.groupby(['constellation', 'launch_no']).agg(
+        {'mean_h_diff': 'mean', 'stddev_h_diff': 'mean', 'min_h_diff': 'min', 'max_h_diff': 'max', 
+         'mean_c_diff': 'mean', 'stddev_c_diff': 'mean', 'min_c_diff': 'min', 'max_c_diff': 'max', 
+         'mean_l_diff': 'mean', 'stddev_l_diff': 'mean', 'min_l_diff': 'min', 'max_l_diff': 'max', 
+         'mean_cart_pos_diff': 'mean', 'stddev_cart_pos_diff': 'mean', 'min_cart_pos_diff': 'min', 'max_cart_pos_diff': 'max'}
+    ).reset_index()
+
+    if export:
+        launch_summary_stats.to_csv("output/launch_specific/launch_summary_stats.csv", index=False)
+    return launch_summary_stats
+
+def get_fft(df, diff_type):
+    """Calculate the FFT of the specified difference type in the dataframe."""
+    df = df.set_index('UTC')
+    diff = df[diff_type]
+    diff_fft = sp.fftpack.fft(diff.values)
+    diff_psd = np.abs(diff_fft)**2
+    fftfreqs = sp.fftpack.fftfreq(len(diff_psd), 1./(96))
+    im = fftfreqs > 0
+    return fftfreqs[im], diff_psd[im]
