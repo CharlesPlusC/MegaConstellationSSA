@@ -30,7 +30,7 @@ def main ():
     # Unhash to run the analysis
     # NORAD_vs_SUP_TLE_analysis(NORADS = all_norads)
 
-    Oneweb_dfs, Starlink_dfs = TLE_analysis_to_df()
+    Oneweb_dfs, Starlink_dfs = TLE_analysis_to_df(NORADS = all_norads[0:2]) # just taking the first two dataframes for speed
 
     print("columns: ", Oneweb_dfs[0].columns)
 

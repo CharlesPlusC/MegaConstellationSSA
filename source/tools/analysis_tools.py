@@ -355,8 +355,8 @@ def TLE_analysis_to_df(NORAD_IDs=None):
     NORAD_IDs (list, optional): List of NORAD IDs to be analyzed. If not specified, all TLE analysis files are analyzed.
 
     Returns:
-    tuple: Two lists of pandas DataFrames. The first list corresponds to the OneWeb constellation data, 
-    and the second to the Starlink constellation data.
+    tuple: Two lists of pandas DataFrames. The first list corresponds to the OneWeb constellation, 
+    and the second to the Starlink constellation.
     """
     
     TLE_analysis_path = "output/TLE_analysis/"
@@ -394,3 +394,4 @@ def TLE_analysis_to_df(NORAD_IDs=None):
             df = add_launch_numbers_to_df(df)
 
     return oneweb_dfs, starlink_dfs
+
