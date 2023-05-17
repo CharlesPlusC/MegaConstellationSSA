@@ -209,3 +209,56 @@ def dist_3d(state1, state2):
     x2, y2, z2 = state2[0], state2[1], state2[2]
     dist = np.sqrt((x1-x2)**2 + (y1-y2)**2 + (z1-z2)**2)
     return dist
+
+
+# Create a transformer for converting between ECEF and LLA
+transformer = Transformer.from_crs(
+    "EPSG:4978",  # WGS-84 (ECEF)
+    "EPSG:4326",  # WGS-84 (LLA)
+    always_xy=True  # Specify to always return (X, Y, Z) ordering
+)
+
+def ecef_to_lla(x, y, z):
+    # Convert input coordinates to meters
+    x_m = np.array(x) * 1000
+    y_m = np.array(y) * 1000
+    z_m = np.array(z) * 1000
+    print("shape of x_m: ", x_m.shape)
+   
+    # Convert coordinates
+    lon, lat, alt_m = transformer.transform(x_m, y_m, z_m)
+    print("shape of lon: ", lon.shape)
+    print("long start: ", lon[0:10])
+
+    # Convert altitude to kilometers
+    alt_km = np.array(alt_m) / 1000
+
+    return lat, lon, alt_km
+
+def eci2latlon(eci_positions, eci_velocities, mjd_times):
+    # check that the first dimensions of eci_positions and eci_velocities are the same
+    if len(eci_positions) != len(eci_velocities):
+        raise ValueError('eci_positions and eci_velocities must have the same first dimension')
+    # check that each eci_position and eci_velocity is of length 3
+    for eci_pos, eci_vel in zip(eci_positions, eci_velocities):
+        if len(eci_pos) != 3 or len(eci_vel) != 3:
+            raise ValueError('Each eci_pos and eci_vel must be of length 3')
+
+    ecef_positions, _ = eci2ecef_astropy(np.array(eci_positions), np.array(eci_velocities), np.array(mjd_times))
+    print("shape of ecef_positions: ", np.shape(ecef_positions))
+    # Convert all ecef_positions to lla_coords at once
+    x = [pos[0] for pos in ecef_positions]
+    y = [pos[1] for pos in ecef_positions]
+    z = [pos[2] for pos in ecef_positions]
+    print("x", x[0:10])
+    print("y", y[0:10])
+    print("z", z[0:10])
+
+    lla_coords = np.array(ecef_to_lla(x, y, z))
+    print("shape of lla_coords: ", np.shape(lla_coords)) #(3, 15552000)
+
+    lats = lla_coords[0]
+    lons = lla_coords[1]
+    print("lats: ", lats)
+    print("lons: ", lons)
+    return lats, lons

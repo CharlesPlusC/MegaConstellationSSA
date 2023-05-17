@@ -29,7 +29,7 @@ def main ():
     all_norads = SL_norads + OW_norads
     print("Norad IDS specified: ", all_norads)
     # Unhash to run the analysis
-    NORAD_vs_SUP_TLE_analysis(NORADS = SL_norads[0])
+    NORAD_vs_SUP_TLE_analysis(NORADS = all_norads) #TODO:specifying the NOARDS doesnt actually seem to do anytbing...
 
     #load in the analysis data
     # Oneweb_dfs, Starlink_dfs = TLE_analysis_to_df(NORAD_IDs = all_norads[0:2]) # just taking the first two dataframes for speed

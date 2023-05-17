@@ -13,7 +13,7 @@ import scipy as sp
 
 #local imports
 from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph
-from .conversions import jd_to_utc, utc_jd_date, midnight_jd_date, HCL_diff, dist_3d, alt_series, ecef_to_lla, eci2ecef_astropy
+from .conversions import jd_to_utc, utc_jd_date, midnight_jd_date, HCL_diff, dist_3d, alt_series, ecef_to_lla, eci2ecef_astropy, eci2latlon
 
 rmse = lambda x: np.sqrt(np.mean(np.square(x)))
 
@@ -226,7 +226,11 @@ def TLE_pair_analyse(pair_TLE_list):
     positions = [pos_vels[0][i][:3] for i in range(len(pos_vels[0]))]
     velocities = [pos_vels[0][i][3:6] for i in range(len(pos_vels[0]))]
 
-    lats, lons = ([eci2latlon(positions, velocities, times[i]- 2400000.5) for i in range(len(times))])
+    # subtract 2400000.5 from times to convert from julian date to mjd time
+    times = np.array(times)
+    mjd_times = [times[i] - 2400000.5 for i in range(len(times))]
+    lats, lons = eci2latlon(eci_positions=positions, eci_velocities=velocities, mjd_times=mjd_times)
+
     return master_ephs,eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times, orbit_ages, lats, lons
 
 def analyze_files(args):
@@ -299,27 +303,6 @@ def process_ephemeris_data(eph_str):
     vel2 = float(vel2)
     vel3 = float(vel3)
     return [eph_time, pos1, pos2, pos3, vel1, vel2, vel3]
-
-def eci2latlon(eci_positions, eci_velocities, mjd_times):
-    # check that the first dimensions of eci_positions and eci_velocities are the same
-    if len(eci_positions) != len(eci_velocities):
-        raise ValueError('eci_positions and eci_velocities must have the same first dimension')
-    # check that each eci_position and eci_velocity is of length 3
-    for eci_pos, eci_vel in zip(eci_positions, eci_velocities):
-        if len(eci_pos) != 3 or len(eci_vel) != 3:
-            raise ValueError('Each eci_pos and eci_vel must be of length 3')
-
-    ecef_positions, _ = eci2ecef_astropy(np.array(eci_positions), np.array(eci_velocities), np.array(mjd_times))
-
-    # Convert each ecef_position to lla_coords
-    lla_coords_list = [ecef_to_lla(x, y, z) for x, y, z in ecef_positions]
-    lla_coords = np.array(lla_coords_list)
-
-    lats = lla_coords[:, 0]
-    lons = lla_coords[:, 1]
-
-    print("latlong: ", lats, lons)
-    return lats, lons
 
 
 def add_launch_numbers_to_df(df):
