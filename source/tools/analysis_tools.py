@@ -304,7 +304,6 @@ def process_ephemeris_data(eph_str):
     vel3 = float(vel3)
     return [eph_time, pos1, pos2, pos3, vel1, vel2, vel3]
 
-
 def add_launch_numbers_to_df(df):
     """
     Add the launch numbers to the dataframe based on the NORAD IDs of the satellites in the dataframe.
@@ -318,21 +317,30 @@ def add_launch_numbers_to_df(df):
     with open('external/selected_satellites.json', 'r') as f:
         selected_satellites = json.load(f)
 
-    NORAD_IDs = df['NORAD_ID'].to_list()
+    NORAD_IDs = df['NORAD_ID'].astype(int).to_list()  # Convert NORAD_IDs to integers
     launch_numbers = []
 
     for NORAD_ID in NORAD_IDs:
-        launch_number = re.search(r'L(\d+)', NORAD_ID)
-        if launch_number:
-            launch_numbers.append(int(launch_number.group(1)))
-        else:
-            # Handle cases where the launch number is not found
-            launch_numbers.append(None)
+        found = False
+        for constellation in selected_satellites:
+            for launch in selected_satellites[constellation]:
+                if NORAD_ID in selected_satellites[constellation][launch]:
+                    launch_number = int(launch[1:])  # Exclude the "L" and convert to integer
+                    launch_numbers.append(launch_number)
+                    found = True
+                    break
+            if found:
+                break
 
-    df['launch'] = launch_numbers
+        if not found:
+            raise ValueError(f"NORAD ID {NORAD_ID} not found in selected_satellites")
+
+    df['launch_no'] = launch_numbers
     return df
 
 def process_TLE_analysis_file(file: str, TLE_analysis_path: str, oneweb_NORAD_IDs: set, starlink_NORAD_IDs: set) -> pd.DataFrame:
+    # read in the TLE analysis .csv file and apply minor processing changes
+
     print('Reading in file: ' + file)
     norad_id = file[:-4]
     df = pd.read_csv(TLE_analysis_path + file)
@@ -410,66 +418,50 @@ def TLE_analysis_to_df(NORAD_IDs: list = None):
 
 def calculate_stats(df_list):
     """Calculate the statistics for each dataframe in the list"""
-    stats = pd.DataFrame(columns=['constellation', 'launch_no', 
-                                  'mean_h_diff', 'stddev_h_diff', 'min_h_diff', 'max_h_diff', 
-                                  'mean_c_diff', 'stddev_c_diff', 'min_c_diff', 'max_c_diff', 
-                                  'mean_l_diff', 'stddev_l_diff', 'min_l_diff', 'max_l_diff', 
-                                  'mean_cart_pos_diff', 'stddev_cart_pos_diff', 'min_cart_pos_diff', 'max_cart_pos_diff'])
+    # concatenate all dataframes in the list
+    df_all = pd.concat(df_list, ignore_index=True)
 
-    for df in df_list:
-        stats = stats.append(
-            {'constellation': df['constellation'].unique()[0],
-             'launch_no': df['launch'].unique()[0], 
-             'mean_h_diff': df['h_diffs'].mean(), 
-             'stddev_h_diff': df['h_diffs'].std(),  
-             'min_h_diff': df['h_diffs'].min(), 
-             'max_h_diff': df['h_diffs'].max(), 
-             'mean_c_diff': df['c_diffs'].mean(), 
-             'stddev_c_diff': df['c_diffs'].std(),  
-             'min_c_diff': df['c_diffs'].min(), 
-             'max_c_diff': df['c_diffs'].max(), 
-             'mean_l_diff': df['l_diffs'].mean(), 
-             'stddev_l_diff': df['l_diffs'].std(), 
-             'min_l_diff': df['l_diffs'].min(), 
-             'max_l_diff': df['l_diffs'].max(), 
-             'mean_cart_pos_diff': df['cart_pos_diffs'].mean(), 
-             'stddev_cart_pos_diff': df['cart_pos_diffs'].std(),  
-             'min_cart_pos_diff': df['cart_pos_diffs'].min(), 
-             'max_cart_pos_diff': df['cart_pos_diffs'].max()},
-            ignore_index=True)
+    # calculate statistics for each launch_no
+    stats = df_all.groupby(['constellation', 'launch_no']).agg(
+        mean_h_diff=('h_diffs', 'mean'),
+        stddev_h_diff=('h_diffs', 'std'),
+        min_h_diff=('h_diffs', 'min'),
+        max_h_diff=('h_diffs', 'max'),
+        mean_c_diff=('c_diffs', 'mean'),
+        stddev_c_diff=('c_diffs', 'std'),
+        min_c_diff=('c_diffs', 'min'),
+        max_c_diff=('c_diffs', 'max'),
+        mean_l_diff=('l_diffs', 'mean'),
+        stddev_l_diff=('l_diffs', 'std'),
+        min_l_diff=('l_diffs', 'min'),
+        max_l_diff=('l_diffs', 'max'),
+        mean_cart_pos_diff=('cart_pos_diffs', 'mean'),
+        stddev_cart_pos_diff=('cart_pos_diffs', 'std'),
+        min_cart_pos_diff=('cart_pos_diffs', 'min'),
+        max_cart_pos_diff=('cart_pos_diffs', 'max')
+    ).reset_index()
+
+    print("stats: ", stats)
+
     return stats
 
-def launch_specific_stats(list_of_list_of_dfs, export=True):
-    """Take a list of lists of dataframes and return launch-specific analysis of positional differences 
+def launch_specific_stats(list_of_dfs, export=True):
+    """Take a lists of dataframes and return launch-specific analysis of positional differences 
 
     Returns:
         pd.DataFrame: Pandas dataframe containing summary statistics for each launch and each constellations
     """
-    all_stats = []
-    for df_list in list_of_list_of_dfs:
-        print("shape of df_list: ", df_list.shape)
-        print("dflist: ", df_list)
-        stats = calculate_stats(df_list)
-        all_stats.append(stats)
-    
-    # concatenate all dataframes
-    launch_summary_stats = pd.concat(all_stats, ignore_index=True)
+    launch_summary_stats = calculate_stats(list_of_dfs)  
+    print("launch summary stats: ", launch_summary_stats)
 
     # convert to categorical variable and int
     launch_summary_stats['launch_no'] = launch_summary_stats['launch_no'].astype('category')
     launch_summary_stats['launch_no'] = launch_summary_stats['launch_no'].astype('int')
 
-    # groupby constellation and launch_no. 
-    launch_summary_stats = launch_summary_stats.groupby(['constellation', 'launch_no']).agg(
-        {'mean_h_diff': 'mean', 'stddev_h_diff': 'mean', 'min_h_diff': 'min', 'max_h_diff': 'max', 
-         'mean_c_diff': 'mean', 'stddev_c_diff': 'mean', 'min_c_diff': 'min', 'max_c_diff': 'max', 
-         'mean_l_diff': 'mean', 'stddev_l_diff': 'mean', 'min_l_diff': 'min', 'max_l_diff': 'max', 
-         'mean_cart_pos_diff': 'mean', 'stddev_cart_pos_diff': 'mean', 'min_cart_pos_diff': 'min', 'max_cart_pos_diff': 'max'}
-    ).reset_index()
-
     if export:
         launch_summary_stats.to_csv("output/launch_specific/launch_summary_stats.csv", index=False)
     return launch_summary_stats
+
 
 def get_fft(df, diff_type):
     """Calculate the FFT of the specified difference type in the dataframe."""
