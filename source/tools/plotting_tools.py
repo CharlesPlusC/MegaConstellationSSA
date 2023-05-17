@@ -36,7 +36,9 @@ def plot_altitude_timeseries(dfs, json_filepath='external/selected_satellites.js
     times = []
     launch_nos = []
     colours = []
-    
+    added_labels = set() # keep track of labels already added to the legend
+    constellations = {} # keep track of constellations for each satellite number
+
     for sat_num in sat_nums:
         for df in dfs:
             if sat_num == df['NORAD_ID'].unique()[0]:
@@ -49,20 +51,30 @@ def plot_altitude_timeseries(dfs, json_filepath='external/selected_satellites.js
                         if int(df['NORAD_ID'][0]) in norad_ids:
                             launch_nos.append(launch)
                             colours.append(launch_colour_dict[launch]) # use the launch colour dictionary to get the colour for the launch
+                            constellations[sat_num] = constellation
 
     fig, ax = plt.subplots(figsize=(8, 5))
     for i in range(len(eph_alts_sup)):
-        ax.scatter(x=times[i], y=eph_alts_sup[i], color=colours[i], label=launch_nos[i], alpha=0.2, s=0.1)
-    ax.set_title(constellation)
+        # only add label if it hasn't been added before
+        label = launch_nos[i] if launch_nos[i] not in added_labels else ""
+        ax.scatter(x=times[i], y=eph_alts_sup[i], color=colours[i], label=label, alpha=0.2, s=0.1)
+        added_labels.add(launch_nos[i]) # mark this label as added
+    ax.set_title(constellations[sat_nums[0]]) # set title to the constellation of the first satellite number
     ax.set_ylabel('Altitude (Km)')
     ax.set_xlabel('Time (MJD)')
     ax.set_xlim(59390, 59940) # window of interest for this project
-    ax.legend(loc='upper right')
+    legend = ax.legend(loc='upper right')
+    # set the alpha value of the legend markers higher
+    for lh in legend.legendHandles: 
+        lh.set_alpha(1)
+        # and make the marker size bigger
+        lh._sizes = [4]
     ax.grid()
     plt.tight_layout()
-    plt.savefig('altitude_tseries_all.png', dpi=400)
+    plt.savefig(f'output/plots/altitude_tseries_{constellations[sat_nums[0]]}.png', dpi=400)
     if show:
         plt.show()
+
 
 def plot_fft_compare(diff_type, launch_data_dict, launch_colour_dict, show = False):
     figure, axis = plt.subplots(2, 1, figsize = (7, 10))

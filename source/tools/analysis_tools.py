@@ -12,7 +12,7 @@ from typing import List
 import scipy as sp
 
 #local imports
-from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph
+from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph, load_satellite_lists
 from .conversions import jd_to_utc, utc_jd_date, midnight_jd_date, HCL_diff, dist_3d, alt_series, ecef_to_lla, eci2ecef_astropy, eci2latlon
 
 rmse = lambda x: np.sqrt(np.mean(np.square(x)))
@@ -333,6 +333,7 @@ def add_launch_numbers_to_df(df):
     return df
 
 def process_TLE_analysis_file(file: str, TLE_analysis_path: str, oneweb_NORAD_IDs: set, starlink_NORAD_IDs: set) -> pd.DataFrame:
+    print('Reading in file: ' + file)
     norad_id = file[:-4]
     df = pd.read_csv(TLE_analysis_path + file)
     df['NORAD_ID'] = norad_id
@@ -342,12 +343,17 @@ def process_TLE_analysis_file(file: str, TLE_analysis_path: str, oneweb_NORAD_ID
     elif norad_id in starlink_NORAD_IDs:
         df['constellation'] = 'Starlink'
 
-    print("processing ephemeris data")
     df['master_ephs_sup'] = df['master_ephs_sup'].apply(process_ephemeris_data)
-    # print("calculating latlon")
-    # df = add_latlon_to_dfs(df)
-    print("assigning launch numbers")
     df = add_launch_numbers_to_df(df)
+
+    # go through the dataframes in OneWeb_dfs and check if the NORAD ID is in the L6 list
+    # if it is remove all the rows that have times before 2459500 because before this date they are orbit raising
+    satellite_lists = load_satellite_lists()
+    norad_OW_L6 = satellite_lists["oneweb"]["L6"]
+    if int(df['NORAD_ID'][0]) in norad_OW_L6:
+        mask = df['master_ephs_sup'].apply(lambda x: x[0] >= 2459500)
+        df = df[mask]
+        df.reset_index(drop=True, inplace=True)
     
     return df
 
@@ -378,10 +384,9 @@ def TLE_analysis_to_df(NORAD_IDs: list = None):
         print("Reading TLE analysis files for NORAD IDs: " + str(NORAD_IDs))
         oneweb_NORAD_IDs = [x for x in NORAD_IDs if x in oneweb_NORAD_IDs]
         starlink_NORAD_IDs = [x for x in NORAD_IDs if x in starlink_NORAD_IDs]
-        not_found_Onewebs = set(NORAD_IDs) - set(oneweb_NORAD_IDs)
-        not_found_Starlinks = set(NORAD_IDs) - set(starlink_NORAD_IDs)
-        if not_found_Onewebs and not_found_Starlinks:
-            raise ValueError("NORAD IDs not found: " + str(not_found_Onewebs) + str(not_found_Starlinks))
+        not_found = set(NORAD_IDs) - (set(oneweb_NORAD_IDs) | set(starlink_NORAD_IDs))  # NORAD IDs not found in either list
+        if not_found:
+            raise ValueError("NORAD IDs not found: " + str(not_found))
     else:
         print("no NORAD IDs specified- analyzing all TLE analysis files")
         oneweb_NORAD_IDs = set(oneweb_NORAD_IDs)
@@ -442,6 +447,8 @@ def launch_specific_stats(list_of_list_of_dfs, export=True):
     """
     all_stats = []
     for df_list in list_of_list_of_dfs:
+        print("shape of df_list: ", df_list.shape)
+        print("dflist: ", df_list)
         stats = calculate_stats(df_list)
         all_stats.append(stats)
     

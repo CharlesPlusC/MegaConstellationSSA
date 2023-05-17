@@ -27,20 +27,19 @@ def main ():
     OW_norads = [str(i) for i in OW_norads]
 
     all_norads = SL_norads + OW_norads
-    print("Norad IDS specified: ", all_norads)
     # Unhash to run the analysis
-    NORAD_vs_SUP_TLE_analysis(NORADS = all_norads) #TODO:specifying the NOARDS doesnt actually seem to do anytbing...
+    # NORAD_vs_SUP_TLE_analysis(NORADS = all_norads) #TODO:specifying the NOARDS doesnt actually seem to do anytbing...
 
     #load in the analysis data
-    # Oneweb_dfs, Starlink_dfs = TLE_analysis_to_df(NORAD_IDs = all_norads[0:2]) # just taking the first two dataframes for speed
+    Oneweb_dfs, Starlink_dfs = TLE_analysis_to_df(NORAD_IDs = all_norads) # just taking the first two dataframes for speed
 
     # plot the altitude time series for the selected list of dataframes
-    # plot_altitude_timeseries(Starlink_dfs, show=True)
-    # plot_altitude_timeseries(Oneweb_dfs, show=True)
+    plot_altitude_timeseries(Starlink_dfs, show=True)
+    plot_altitude_timeseries(Oneweb_dfs, show=True)
 
-    # all_dfs = Oneweb_dfs + Starlink_dfs
+    all_dfs = Oneweb_dfs + Starlink_dfs
     # calculate the launch-specific stats and store them in .csv file
-    # launch_specific_stats(all_dfs)
+    launch_specific_stats(all_dfs)
 if __name__ == "__main__":
     main()
     
