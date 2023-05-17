@@ -14,7 +14,7 @@ mpl.rcParams['font.size'] = 11
 # Define a dictionary of colours for the different launches to be consistent across plots
 launch_colour_dict = {'L4': 'xkcd:blue', 'L28': 'xkcd:dark red', 'L5': 'xkcd:azure', 'L36': 'xkcd:orange', 'L6': 'xkcd:light blue', 'L30': 'xkcd:coral'}
 
-def plot_altitude_timeseries(dfs, json_filepath='external/satellite_lists.json', show=False):
+def plot_altitude_timeseries(dfs, json_filepath='external/selected_satellites.json', show=False):
     """
     Plots altitude time series for different satellites from given dataframes.
 

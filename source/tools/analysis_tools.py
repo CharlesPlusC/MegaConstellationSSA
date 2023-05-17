@@ -220,8 +220,14 @@ def TLE_pair_analyse(pair_TLE_list):
 
     #altitude time series for each ephemeris in the amster ephemeris
     eph_alts = [alt_series(ephemeris) for ephemeris in master_ephs]
-        
-    return master_ephs,eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times, orbit_ages
+
+    #lat, lon only calculated for the first ephemeris (supplemental TLE data)
+    # get the positions form pos_vels[0]. For each item in pos_vels[0], get the first 3 items (position) and the last next 3 items (velocity)
+    positions = [pos_vels[0][i][:3] for i in range(len(pos_vels[0]))]
+    velocities = [pos_vels[0][i][3:6] for i in range(len(pos_vels[0]))]
+
+    lats, lons = ([eci2latlon(positions, velocities, times[i]- 2400000.5) for i in range(len(times))])
+    return master_ephs,eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times, orbit_ages, lats, lons
 
 def analyze_files(args):
     NORAD_file, SUP_file, NORAD_TLE_folder, SUP_TLE_folder, analysis_output_path = args
@@ -245,9 +251,9 @@ def analyze_files(args):
         #combine the TLEs into a list 
         sup_NORAD_pair = [sup_read, NORAD_read]
         #Analyse the differences 
-        master_ephs, eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times, orbit_ages = TLE_pair_analyse(sup_NORAD_pair)
+        master_ephs, eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times, orbit_ages, lats, lons = TLE_pair_analyse(sup_NORAD_pair)
         # Make pandas dataframe and save into csv
-        df = pd.DataFrame({'h_diffs': h_diffs, 'c_diffs': c_diffs, 'l_diffs': l_diffs, 'cart_pos_diffs': cart_pos_diffs, 'times': times, 'eph_alts_sup': eph_alts[0], 'eph_alts_norad': eph_alts[1], 'master_ephs_sup': master_ephs[0], 'master_ephs_norad': master_ephs[1], 'orbit_ages_sup': orbit_ages[0], 'orbit_ages_norad': orbit_ages[1]})
+        df = pd.DataFrame({'h_diffs': h_diffs, 'c_diffs': c_diffs, 'l_diffs': l_diffs, 'cart_pos_diffs': cart_pos_diffs, 'times': times, 'eph_alts_sup': eph_alts[0], 'eph_alts_norad': eph_alts[1], 'master_ephs_sup': master_ephs[0], 'master_ephs_norad': master_ephs[1], 'orbit_ages_sup': orbit_ages[0], 'orbit_ages_norad': orbit_ages[1], 'lats': lats, 'lons': lons})
         df.to_csv(total_out_path)
 
 def NORAD_vs_SUP_TLE_analysis(NORADS = [], analysis_output_path = 'output/TLE_analysis/'):
@@ -294,26 +300,27 @@ def process_ephemeris_data(eph_str):
     vel3 = float(vel3)
     return [eph_time, pos1, pos2, pos3, vel1, vel2, vel3]
 
-def add_latlon_to_dfs(df):
-    """Add latitude and longitude columns to the dataframe.
-       These are calculated from the ephemeris data in the dataframe.
+def eci2latlon(eci_positions, eci_velocities, mjd_times):
+    # check that the first dimensions of eci_positions and eci_velocities are the same
+    if len(eci_positions) != len(eci_velocities):
+        raise ValueError('eci_positions and eci_velocities must have the same first dimension')
+    # check that each eci_position and eci_velocity is of length 3
+    for eci_pos, eci_vel in zip(eci_positions, eci_velocities):
+        if len(eci_pos) != 3 or len(eci_vel) != 3:
+            raise ValueError('Each eci_pos and eci_vel must be of length 3')
 
-    Args:
-        df (pandas dataframe): The dataframe to add the latitude and longitude columns to.
+    ecef_positions, _ = eci2ecef_astropy(np.array(eci_positions), np.array(eci_velocities), np.array(mjd_times))
 
-    Returns:
-        df: The dataframe with the latitude and longitude columns added.
-    """
-    eci_positions = np.array(df['master_ephs_sup'].to_list())[:, 1:4]
-    eci_velocities = np.array(df['master_ephs_sup'].to_list())[:, 4:7]
-    mjd_times = df['times'] - 2400000.5
-    ecef_positions, _ = eci2ecef_astropy(eci_positions, eci_velocities, mjd_times)
-    lla_coords = np.array([ecef_to_lla(x, y, z) for x, y, z in ecef_positions])
+    # Convert each ecef_position to lla_coords
+    lla_coords_list = [ecef_to_lla(x, y, z) for x, y, z in ecef_positions]
+    lla_coords = np.array(lla_coords_list)
+
     lats = lla_coords[:, 0]
     lons = lla_coords[:, 1]
-    df['lat'] = lats
-    df['lon'] = lons
-    return df
+
+    print("latlong: ", lats, lons)
+    return lats, lons
+
 
 def add_launch_numbers_to_df(df):
     """
@@ -352,8 +359,11 @@ def process_TLE_analysis_file(file: str, TLE_analysis_path: str, oneweb_NORAD_ID
     elif norad_id in starlink_NORAD_IDs:
         df['constellation'] = 'Starlink'
 
+    print("processing ephemeris data")
     df['master_ephs_sup'] = df['master_ephs_sup'].apply(process_ephemeris_data)
-    df = add_latlon_to_dfs(df)
+    # print("calculating latlon")
+    # df = add_latlon_to_dfs(df)
+    print("assigning launch numbers")
     df = add_launch_numbers_to_df(df)
     
     return df
@@ -385,11 +395,8 @@ def TLE_analysis_to_df(NORAD_IDs: list = None):
         print("Reading TLE analysis files for NORAD IDs: " + str(NORAD_IDs))
         oneweb_NORAD_IDs = [x for x in NORAD_IDs if x in oneweb_NORAD_IDs]
         starlink_NORAD_IDs = [x for x in NORAD_IDs if x in starlink_NORAD_IDs]
-        # if the NORAD ID is not in the list of NORAD IDs, then it is not in the constellation
-        # subtract identical NORAD IDs from the two lists to get the NORAD IDs that are not in the constellation
         not_found_Onewebs = set(NORAD_IDs) - set(oneweb_NORAD_IDs)
         not_found_Starlinks = set(NORAD_IDs) - set(starlink_NORAD_IDs)
-        # return an error if the NORAD ID is not found in either constellation
         if not_found_Onewebs and not_found_Starlinks:
             raise ValueError("NORAD IDs not found: " + str(not_found_Onewebs) + str(not_found_Starlinks))
     else:
@@ -401,19 +408,6 @@ def TLE_analysis_to_df(NORAD_IDs: list = None):
             print("OneWeb NORAD IDs: ", oneweb_NORAD_IDs)
         elif len (starlink_NORAD_IDs) != 0:
             print("Starlink NORAD IDs: " ,starlink_NORAD_IDs)
-   
-    for file in os.listdir(TLE_analysis_path):
-        if file.endswith('.csv'):
-            norad_id = file[:-4]
-            df = pd.read_csv(TLE_analysis_path + file)
-            df['NORAD_ID'] = norad_id
-
-            if norad_id in oneweb_NORAD_IDs:
-                df['constellation'] = 'OneWeb'
-                oneweb_dfs.append(df)
-            elif norad_id in starlink_NORAD_IDs:
-                df['constellation'] = 'Starlink'
-                starlink_dfs.append(df)
 
     files = [file for file in os.listdir(TLE_analysis_path) if file.endswith('.csv')]
     for file in files:
