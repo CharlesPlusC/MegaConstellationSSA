@@ -4,6 +4,7 @@ from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis, TLE_analysis_to_df, 
 from tools.tletools import load_satellite_lists
 from tools.plotting_tools import plot_altitude_timeseries
 import cProfile
+import numpy as np
 
 def main ():
     # load the satellite lists from the source/satellite_lists.json file
@@ -34,10 +35,11 @@ def main ():
     Oneweb_dfs, Starlink_dfs = TLE_analysis_to_df(NORAD_IDs = all_norads) # just taking the first two dataframes for speed
 
     # plot the altitude time series for the selected list of dataframes
-    plot_altitude_timeseries(Starlink_dfs, show=True)
-    plot_altitude_timeseries(Oneweb_dfs, show=True)
+    # plot_altitude_timeseries(Starlink_dfs, show=True)
+    # plot_altitude_timeseries(Oneweb_dfs, show=True)
 
-    all_dfs = Oneweb_dfs + Starlink_dfs
+    all_dfs = Oneweb_dfs + Starlink_dfs # combine the two lists of dataframes
+
     # calculate the launch-specific stats and store them in .csv file
     launch_specific_stats(all_dfs)
 if __name__ == "__main__":
