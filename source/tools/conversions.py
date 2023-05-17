@@ -218,17 +218,6 @@ transformer = Transformer.from_crs(
     always_xy=True  # Specify to always return (X, Y, Z) ordering
 )
 
-from typing import List, Tuple
-import numpy as np
-from pyproj import Transformer
-
-# Define a global transformer
-transformer = Transformer.from_crs(
-        "EPSG:4978", # WGS-84 (ECEF)
-        "EPSG:4326", # WGS-84 (LLA)
-        always_xy=True # Specify to always return (X, Y, Z) ordering
-    )
-
 def ecef_to_lla(x: List[float], y: List[float], z: List[float]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
     """
     Convert Earth-Centered, Earth-Fixed (ECEF) coordinates to Latitude, Longitude, Altitude (LLA).
