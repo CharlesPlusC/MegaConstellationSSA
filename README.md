@@ -24,7 +24,7 @@ password = YourPassword
 - The data for the SUP_TLEs and NORAD_TLEs are already provided to save time. 
     If you wish to re-download the data yourself, you can do so for the NORAD TLEs by running the getdata.py script. Note that there is currently no way of downloading SUP_TLE data programatically so you will have to do this manually from celestrak.org.
 - The NORAD IDs of the satellites selected for this study are provided in external/selected_satellites.json
-- The TLE_analysis files are around ~1GB in size so I have not added these to the repo. You will have to run the NORAD_vs_SUP_TLE_analysis() function to generate these.
+- The TLE_analysis files are around ~1GB in size so I have not added these to the repo. You will have to run the NORAD_vs_SUP_TLE_analysis() function to generate these. This will only take a couple of minutes typically.
 
 ## Issues
 If you have any issues with the code, please raise an issue on this repository and I will try to get back to you as soon as possible.
