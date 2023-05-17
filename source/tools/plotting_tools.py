@@ -71,7 +71,7 @@ def plot_altitude_timeseries(dfs, json_filepath='external/selected_satellites.js
         lh._sizes = [4]
     ax.grid()
     plt.tight_layout()
-    plt.savefig(f'output/plots/altitude_tseries_{constellations[sat_nums[0]]}.png', dpi=400)
+    plt.savefig(f'output/plots/altitude/altitude_tseries_{constellations[sat_nums[0]]}.png', dpi=400)
     if show:
         plt.show()
 
