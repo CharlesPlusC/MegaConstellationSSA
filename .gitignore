@@ -1,2 +1,3 @@
 SLTrack.ini
 output/TLE_analysis/*.csv
+*/__pycache__/
