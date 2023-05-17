@@ -1,7 +1,6 @@
 """
 Time and coordinate conversions
 """
-
 import numpy as np
 import warnings
 from astropy import units as u
@@ -11,6 +10,7 @@ from poliastro.twobody import Orbit
 import datetime
 from astropy.coordinates import GCRS, ITRS, CartesianRepresentation, CartesianDifferential
 from pyproj import Transformer
+from typing import List, Tuple
 
 def kep2car(a, e, i, w, W, V):
     # Suppress the UserWarning for true anomaly wrapping
@@ -218,47 +218,76 @@ transformer = Transformer.from_crs(
     always_xy=True  # Specify to always return (X, Y, Z) ordering
 )
 
-def ecef_to_lla(x, y, z):
+from typing import List, Tuple
+import numpy as np
+from pyproj import Transformer
+
+# Define a global transformer
+transformer = Transformer.from_crs(
+        "EPSG:4978", # WGS-84 (ECEF)
+        "EPSG:4326", # WGS-84 (LLA)
+        always_xy=True # Specify to always return (X, Y, Z) ordering
+    )
+
+def ecef_to_lla(x: List[float], y: List[float], z: List[float]) -> Tuple[np.ndarray, np.ndarray, np.ndarray]:
+    """
+    Convert Earth-Centered, Earth-Fixed (ECEF) coordinates to Latitude, Longitude, Altitude (LLA).
+    
+    Args:
+        x: x coordinates in km.
+        y: y coordinates in km.
+        z: z coordinates in km.
+    
+    Returns:
+        lat: Latitudes in degrees.
+        lon: Longitudes in degrees.
+        alt_km: Altitudes in km.
+    """
     # Convert input coordinates to meters
     x_m = np.array(x) * 1000
     y_m = np.array(y) * 1000
-    z_m = np.array(z) * 1000
-    print("shape of x_m: ", x_m.shape)
-   
+    z_m = np.array(z) * 1000   
+
     # Convert coordinates
     lon, lat, alt_m = transformer.transform(x_m, y_m, z_m)
-    print("shape of lon: ", lon.shape)
-    print("long start: ", lon[0:10])
 
     # Convert altitude to kilometers
     alt_km = np.array(alt_m) / 1000
 
     return lat, lon, alt_km
 
-def eci2latlon(eci_positions, eci_velocities, mjd_times):
-    # check that the first dimensions of eci_positions and eci_velocities are the same
+def eci2latlon(eci_positions: List[List[float]], eci_velocities: List[List[float]], mjd_times: List[float]) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Convert Earth-Centered Inertial (ECI) coordinates to Latitude and Longitude.
+    
+    Args:
+        eci_positions: List of ECI positions.
+        eci_velocities: List of ECI velocities.
+        mjd_times: List of modified Julian dates.
+    
+    Returns:
+        lats: Latitudes in degrees.
+        lons: Longitudes in degrees.
+    """
+    # Check that the first dimensions of eci_positions and eci_velocities are the same
     if len(eci_positions) != len(eci_velocities):
         raise ValueError('eci_positions and eci_velocities must have the same first dimension')
-    # check that each eci_position and eci_velocity is of length 3
+
+    # Check that each eci_position and eci_velocity is of length 3
     for eci_pos, eci_vel in zip(eci_positions, eci_velocities):
         if len(eci_pos) != 3 or len(eci_vel) != 3:
             raise ValueError('Each eci_pos and eci_vel must be of length 3')
 
     ecef_positions, _ = eci2ecef_astropy(np.array(eci_positions), np.array(eci_velocities), np.array(mjd_times))
-    print("shape of ecef_positions: ", np.shape(ecef_positions))
+    
     # Convert all ecef_positions to lla_coords at once
     x = [pos[0] for pos in ecef_positions]
     y = [pos[1] for pos in ecef_positions]
     z = [pos[2] for pos in ecef_positions]
-    print("x", x[0:10])
-    print("y", y[0:10])
-    print("z", z[0:10])
 
     lla_coords = np.array(ecef_to_lla(x, y, z))
-    print("shape of lla_coords: ", np.shape(lla_coords)) #(3, 15552000)
 
     lats = lla_coords[0]
     lons = lla_coords[1]
-    print("lats: ", lats)
-    print("lons: ", lons)
+
     return lats, lons
