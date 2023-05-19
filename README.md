@@ -1,3 +1,6 @@
+[![HitCount](https://hits.dwyl.com/CharlesPlusC/MegaConstellationSSA.svg?style=flat-square&show=unique)](http://hits.dwyl.com/CharlesPlusC/MegaConstellationSSA)
+
+
 # MegaConstellationSSA
 Code repository accompanying the paper: _C.Constant, S.Bhattarai, M.Ziebart_ "On the Limits of Current Practices in Uncooperative Space Surveillance: Analysis of Mega-Constellation Data Time-Series"(2023) 
 
