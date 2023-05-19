@@ -145,3 +145,84 @@ def plot_fft_comparison(list_of_dfs: List[pd.DataFrame], diff_types: List[str] =
             
             if show == True:
                 plt.show()
+
+def plot_diff_subplots(list_of_dfs: List[pd.DataFrame], diff_types: List[str] = diff_types, launch_colour_dict: Dict[str, str] = launch_colour_dict, show: bool = True) -> None:
+    # Group dataframes by constellation
+    grouped_dfs = {}
+    for df in list_of_dfs:
+        constellation = str(df['constellation'][0])
+        if constellation not in grouped_dfs:
+            grouped_dfs[constellation] = [df]
+        else:
+            grouped_dfs[constellation].append(df)
+
+    # Loop through each constellation and plot dataframes
+    for constellation, sats_dataframe in grouped_dfs.items():
+        for diff_type in diff_types:
+            # sort the dfs in the list called sats_dataframe by increasing NORAD ID
+            sats_dataframe.sort(key=lambda x: x['NORAD_ID'].iloc[0])
+
+            # Create subplot for each satellite
+            fig, axs = plt.subplots(6, 5, figsize=(15, 9))
+            plotted_ids = []
+            earliest_time = 59400
+            latest_time = 59925
+            i = 0  # satellite counter
+            launch_present = set()  # To keep track of the launches present in the plot
+            
+            for row in axs:
+                for ax in row:
+                    if i < len(sats_dataframe):
+                        df = sats_dataframe[i]
+                        launch = 'L' + str(df['launch_no'][0])
+                        col = launch_colour_dict.get(launch, 'black')
+                        launch_present.add(launch)
+
+                        ax.scatter(df['MJD'], df[diff_type], s=0.1, alpha=0.2, c=col)
+                        ax.set_facecolor('xkcd:grey')
+
+                        ax.set_title('NORAD: ' + str(df['NORAD_ID'][0]), fontsize=10)
+
+                        # Configure plot limits and labels according to diff_type
+                        if diff_type == 'h_diffs':
+                            ax.set_ylim(-2, 2)
+                            fig.text(0.04, 0.5, 'Height Difference (km)', ha='center', va='center', rotation='vertical', fontsize=12)
+                        elif diff_type == 'c_diffs':
+                            ax.set_ylim(-0.0005, 0.0005)
+                            fig.text(0.04, 0.5, 'Cross-track Difference (km)', ha='center', va='center', rotation='vertical', fontsize=12)
+                        elif diff_type == 'l_diffs':
+                            ax.set_ylim(-0.01, 0.01)
+                            fig.text(0.04, 0.5, 'In-track Difference (km)', ha='center', va='center', rotation='vertical', fontsize=12)
+                        elif diff_type == 'cart_pos_diffs':
+                            ax.set_ylim(0, 5)
+                            fig.text(0.04, 0.5, '3D Position Difference (km)', ha='center', va='center', rotation='vertical', fontsize=12)
+                        else:
+                            raise ValueError('diff_type must be one of: {}'.format(diff_types))
+
+                        ax.set_xticks([] if i <= 23 else np.linspace(earliest_time, latest_time,4))
+                        # ax.set_yticks([] if i % 5 != 0 else [min_val, 0, max_val])
+
+                        ax.text(0.025, 0.96, 
+                                'µ:' + str(round((df[diff_type].mean())*1000, 3)) + ' m' + '; ' + 'σ: ' + str(round((df[diff_type].std())*1000, 3)) + ' m',
+                                transform=ax.transAxes,
+                                fontsize=10, 
+                                verticalalignment='top')
+
+                        i += 1
+
+            # Custom legend with only the launches present in the plot
+            legend_elements = [Patch(facecolor=launch_colour_dict[l], label=l) for l in launch_present]
+            plt.legend(handles=legend_elements, bbox_to_anchor=(1.05, 1), loc='upper left')
+
+            # Remove axes for empty plots
+            for j in range(i, 30):
+                fig.delaxes(axs.flatten()[j])
+
+            fig.text(0.5, 0.04, 'Time (MJD days)', ha='center', va='center', fontsize=12)
+            fig.suptitle(constellation + ': ' + diff_type + ' Over Time', fontsize=16)
+            fig.tight_layout()
+
+            plt.savefig(f'output/plots/timseries_subplots/{constellation}_{diff_type}.png', dpi=300)
+            if show:
+                plt.show()
+

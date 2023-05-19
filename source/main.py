@@ -2,7 +2,7 @@ import os
 import sys
 from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis, TLE_analysis_to_df, launch_specific_stats
 from tools.tletools import load_satellite_lists
-from tools.plotting_tools import plot_altitude_timeseries, plot_fft_comparison
+from tools.plotting_tools import plot_altitude_timeseries, plot_fft_comparison, plot_diff_subplots
 import cProfile
 import numpy as np
 
@@ -44,7 +44,9 @@ def main ():
     # launch_specific_stats(all_dfs)
 
     # plot the FFTs for the selected list of dataframes
-    plot_fft_comparison(all_dfs, show=False)
+    # plot_fft_comparison(all_dfs, show=True)
+
+    plot_diff_subplots(all_dfs, show=True)
 
 if __name__ == "__main__":
     main()
