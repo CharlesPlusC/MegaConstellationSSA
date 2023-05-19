@@ -83,7 +83,7 @@ def plot_altitude_timeseries(dfs, json_filepath='external/selected_satellites.js
 
 def plot_fft_comparison(list_of_dfs: List[pd.DataFrame], diff_types: List[str] = diff_types, launch_colour_dict: Dict[str, str] = launch_colour_dict, show: bool = True) -> None:
     """
-    Plots the power spectral density of each dimension (H/C/L/3D) in the differences 
+    Plots the frequency and power spectral density  of each dimension (H/C/L/3D) time-series in the differences 
     between NORAD and operator TLEs for each launch.
     
     Args:
@@ -95,6 +95,7 @@ def plot_fft_comparison(list_of_dfs: List[pd.DataFrame], diff_types: List[str] =
     Returns:
         None: The function performs plotting operation and does not return any value.
     """
+
     grouped_dfs = {}
     for df in list_of_dfs:
         constellation = str(df['constellation'][0])
@@ -143,86 +144,82 @@ def plot_fft_comparison(list_of_dfs: List[pd.DataFrame], diff_types: List[str] =
 
             plt.savefig('output/plots/Fourier_analysis/{}_{}_fft.png'.format(constellation, diff_type), dpi=300)
             
-            if show == True:
+            if show:
                 plt.show()
 
-def plot_diff_subplots(list_of_dfs: List[pd.DataFrame], diff_types: List[str] = diff_types, launch_colour_dict: Dict[str, str] = launch_colour_dict, show: bool = True) -> None:
-    # Group dataframes by constellation
-    grouped_dfs = {}
-    for df in list_of_dfs:
-        constellation = str(df['constellation'][0])
-        if constellation not in grouped_dfs:
-            grouped_dfs[constellation] = [df]
-        else:
-            grouped_dfs[constellation].append(df)
+def plot_diff_subplots(sats_dataframe, diffs='all', show=False):
+    # Divide dataframes by constellation
+    constellation_dict = {}
+    for df in sats_dataframe:
+        constellation = df['constellation'][0]
+        if constellation not in constellation_dict:
+            constellation_dict[constellation] = []
+        constellation_dict[constellation].append(df)
 
-    # Loop through each constellation and plot dataframes
-    for constellation, sats_dataframe in grouped_dfs.items():
-        for diff_type in diff_types:
-            # sort the dfs in the list called sats_dataframe by increasing NORAD ID
+    if diffs == 'all':
+        diffs_types = np.array(diff_types)
+    else:
+        diffs_types = np.array(diffs)
+
+    for constellation, sats_dataframe in constellation_dict.items():
+        for j in range(0, len(diffs_types), 1):
+            diff_type = diffs_types[j]
             sats_dataframe.sort(key=lambda x: x['NORAD_ID'].iloc[0])
 
-            # Create subplot for each satellite
             fig, axs = plt.subplots(6, 5, figsize=(15, 9))
-            plotted_ids = []
+            fig.suptitle(r'$\Delta$' + diff_type[0].upper()+ 'between NORAD- and Operator-TLE derived SGP4 orbits for ' + constellation + ' Satellites')
+
             earliest_time = 59400
             latest_time = 59925
-            i = 0  # satellite counter
-            launch_present = set()  # To keep track of the launches present in the plot
-            
+            i = 0
+            used_colors = set()  # Store the used colors for legend
             for row in axs:
                 for ax in row:
                     if i < len(sats_dataframe):
                         df = sats_dataframe[i]
-                        launch = 'L' + str(df['launch_no'][0])
-                        col = launch_colour_dict.get(launch, 'black')
-                        launch_present.add(launch)
+                        launch = df['launch_no'][0]
+                        launch_key = 'L' + str(launch)
+                        if launch_key in launch_colour_dict:
+                            col = launch_colour_dict[launch_key]
+                            used_colors.add(launch_key)
+                        else:
+                            raise Exception('Launch key not found in launch_colour_dict')
 
                         ax.scatter(df['MJD'], df[diff_type], s=0.1, alpha=0.2, c=col)
                         ax.set_facecolor('xkcd:grey')
+                        ax.set_title('NORAD:' + str(df['NORAD_ID'][0]), fontsize=10)
 
-                        ax.set_title('NORAD: ' + str(df['NORAD_ID'][0]), fontsize=10)
+                        min_max_dict = {'h_diffs': (-2, 2), 'c_diffs': (-1, 1), 'l_diffs': (-20, 20),
+                                        'cart_pos_diffs': (0, 20)}
+                        min, max = min_max_dict.get(diff_type, (0, 0))
+                        ax.set_ylim(min, max)
+                        fig.text(0.08, 0.5, r'$\Delta$ ' + diff_type[0].upper() + ' (Km)', ha='center', va='center',
+                                 rotation='vertical', fontsize=10)
 
-                        # Configure plot limits and labels according to diff_type
-                        if diff_type == 'h_diffs':
-                            ax.set_ylim(-2, 2)
-                            fig.text(0.04, 0.5, 'Height Difference (km)', ha='center', va='center', rotation='vertical', fontsize=12)
-                        elif diff_type == 'c_diffs':
-                            ax.set_ylim(-0.0005, 0.0005)
-                            fig.text(0.04, 0.5, 'Cross-track Difference (km)', ha='center', va='center', rotation='vertical', fontsize=12)
-                        elif diff_type == 'l_diffs':
-                            ax.set_ylim(-0.01, 0.01)
-                            fig.text(0.04, 0.5, 'In-track Difference (km)', ha='center', va='center', rotation='vertical', fontsize=12)
-                        elif diff_type == 'cart_pos_diffs':
-                            ax.set_ylim(0, 5)
-                            fig.text(0.04, 0.5, '3D Position Difference (km)', ha='center', va='center', rotation='vertical', fontsize=12)
+                        if i > 23:
+                            ax.set_xticks(np.linspace(earliest_time, latest_time, 4))
                         else:
-                            raise ValueError('diff_type must be one of: {}'.format(diff_types))
+                            ax.set_xticks([])
+                        if i % 5 == 0:
+                            ax.set_yticks([min, 0, max])
+                        else:
+                            ax.set_yticks([])
 
-                        ax.set_xticks([] if i <= 23 else np.linspace(earliest_time, latest_time,4))
-                        # ax.set_yticks([] if i % 5 != 0 else [min_val, 0, max_val])
+                        ax.text(0.025, 0.96,
+                                'µ:' + str(round((df[diff_type].mean()) * 1000, 3)) + ' m' + '; ' + 'σ: ' + str(
+                                    round(df[diff_type].std() * 1000, 3)) + ' m', transform=ax.transAxes, fontsize=10,
+                                verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5))
 
-                        ax.text(0.025, 0.96, 
-                                'µ:' + str(round((df[diff_type].mean())*1000, 3)) + ' m' + '; ' + 'σ: ' + str(round((df[diff_type].std())*1000, 3)) + ' m',
-                                transform=ax.transAxes,
-                                fontsize=10, 
-                                verticalalignment='top')
+                        fig.text(0.5, 0.02, 'Modified Julian Day', ha='center', va='center', fontsize=12)
 
+                        patch_list = [Patch(facecolor=launch_colour_dict[key], edgecolor=launch_colour_dict[key], label=key)
+                                      for key in used_colors]  # Change here, only include used colors
+                        fig.legend(patch_list, [key for key in used_colors], loc='center right')  # Change here, only include used colors
+
+                        plt.setp(ax.get_xticklabels(), rotation=50, ha="right", rotation_mode="default")
                         i += 1
 
-            # Custom legend with only the launches present in the plot
-            legend_elements = [Patch(facecolor=launch_colour_dict[l], label=l) for l in launch_present]
-            plt.legend(handles=legend_elements, bbox_to_anchor=(1.05, 1), loc='upper left')
-
-            # Remove axes for empty plots
-            for j in range(i, 30):
-                fig.delaxes(axs.flatten()[j])
-
-            fig.text(0.5, 0.04, 'Time (MJD days)', ha='center', va='center', fontsize=12)
-            fig.suptitle(constellation + ': ' + diff_type + ' Over Time', fontsize=16)
-            fig.tight_layout()
-
-            plt.savefig(f'output/plots/timseries_subplots/{constellation}_{diff_type}.png', dpi=300)
+            plt.subplots_adjust(hspace=0.3, wspace=0.08)
+            plt.savefig('output/plots/timseries_subplots/'+diff_type+'_subplots_'+constellation+'.png', dpi=300)
             if show:
                 plt.show()
-
