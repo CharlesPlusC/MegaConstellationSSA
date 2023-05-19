@@ -1,7 +1,7 @@
 # MegaConstellationSSA
 Code repository accompanying the paper: _C.Constant, S.Bhattarai, M.Ziebart_ "On the Limits of Current Practices in Uncooperative Space Surveillance: Analysis of Mega-Constellation Data Time-Series"(2023) 
 
-## Abstract:
+## Short Abstract:
 The rapid increase of objects in Low Earth Orbit (LEO) has underscored the need for advanced Space Traffic Management (STM) practices. The effectiveness of STM largely depends on accurately determining object orbits in densely populated satellite neighborhoods. In this light, our study aims to bridge the gap between current practices and STM requirements by emphasizing the imperative role of Space Situational Awareness (SSA) data quality, especially its precision, accuracy, and timeliness.
 
 To this end, we present this GitHub repository which features the code used in our research. The code evaluates Two-Line-Element (TLE) data, based on both cooperative and uncooperative tracking for a subset of the Starlink constellation, against high-precision operator ephemerides. Our findings indicate that uncooperative tracking data has a mean positional error of 1.17-2km, while cooperative tracking data is approximately 60% more accurate.
