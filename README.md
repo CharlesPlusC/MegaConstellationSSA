@@ -33,8 +33,6 @@ The following code reads in all TLEs available for each spacecraft and propagate
 ## Issues
 If you have any issues with the code, please raise an issue on this repository and I will try to get back to you as soon as possible.
 
-## License: GNU GPLv3
-
 ## Envs
 If you make changes to your environment and you wish to save these to the envionment file:
 ``` bash
