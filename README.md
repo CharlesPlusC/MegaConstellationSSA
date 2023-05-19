@@ -45,9 +45,11 @@ The state vectors for each spacecraft orbit are continuously updated with new TL
 The following repo will enable you to replicate all figures in the paper and a number of others that were not included for brevity.
 
 __altitude time series plots__
+
 <img src="output/plots/altitude/altitude_tseries_starlink.png" width="50%" height="50%">
 
 __Fourier analysis of the difference time-series__
+
 <img src="output/plots/Fourier_analysis/OneWeb_h_diffs_fft.png" width="50%" height="50%">
 
 __Cross-track/along-track/height/3D difference time-series subplots__
