@@ -352,7 +352,7 @@ def process_TLE_analysis_file(file: str, TLE_analysis_path: str, oneweb_NORAD_ID
 
     df['master_ephs_sup'] = df['master_ephs_sup'].apply(process_ephemeris_data)
     df['UTC'] = Time(df['times'].values, format='jd', scale='utc').datetime # convert the times to UTC
-
+    df['MJD'] = df['times'] - 2400000.5 # convert the times to MJD
     df = add_launch_numbers_to_df(df)
 
     # go through the dataframes in OneWeb_dfs and check if the NORAD ID is in the L6 list
