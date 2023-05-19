@@ -7,6 +7,8 @@ The rapid increase of objects in Low Earth Orbit (LEO) has underscored the need 
 To this end, we present this GitHub repository which features the code used in our research. The code evaluates Two-Line-Element (TLE) data, based on both cooperative and uncooperative tracking for a subset of the Starlink constellation, against high-precision operator ephemerides. Our findings indicate that uncooperative tracking data has a mean positional error of 1.17-2km, while cooperative tracking data is approximately 60% more accurate.
 Our time-series analysis of TLE data for Starlink and OneWeb mega-constellations uncovers significant discrepancies, further underscoring the need for transparency and improvement in SSA data quality.
 
+## Collaboration statement:
+
 We welcome developers, researchers, and SSA practitioners to explore this repository, review our approach, and contribute to this essential field. Feel free to raise issues, suggest improvements, or submit pull requests. Let's collaborate to ensure the safe and sustainable utilization of our shared space environment. Your expertise and contributions are not only valued but vital in bridging the gap between the required and actual positional data accuracy in SSA systems.
 
 ## Instructions for use
