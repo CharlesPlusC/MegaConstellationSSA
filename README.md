@@ -25,8 +25,9 @@ conda env create -f megaconst_env.yml
 username = your_email@email.com
 password = YourPassword
 ```
-5. Ensure that this file is in the .gitignore file so that it is not uploaded to the repository (it should be by default)
-6. Run the code in main.py for the full analysis
+5. Ensure that SLTrack.ini is in the .gitignore file so that it is not uploaded to the repository (it should be by default)
+
+6. Simply run main.py for the full analysis to run from start to finish.
 
 ## Information:
 
@@ -39,6 +40,21 @@ The state vectors for each spacecraft orbit are continuously updated with new TL
     If you wish to re-download the data yourself, you can do so for the NORAD TLEs by running the getdata.py script. Note that there is currently no way of downloading SUP_TLE data programatically so you will have to do this manually from celestrak.org.
 - The NORAD IDs of the satellites selected for this study are provided in external/selected_satellites.json
 - The TLE_analysis files are around ~1GB in size so I have not added these to the repo. You will have to run the NORAD_vs_SUP_TLE_analysis() function to generate these. This will only take a couple of minutes typically.
+
+## Outputs:
+The following repo will enable you to replicate all figures in the paper and a number of others that were not included for brevity.
+
+__altitude time series plots__
+![Starlink Altitude](output/plots/altitude/altitude_tseries_starlink.png)
+
+__Fourier analysis of the difference time-series__
+![Oneweb Fourier](output/plots/Fourier_analysis/OneWeb_h_diffs_fft.png)
+
+__Cross-track/along-track/height/3D difference time-series subplots__
+![Oneweb Cdiff subplots](output/plots/timseries_subplots/c_diffs_subplots_OneWeb.png)
+
+__Launch statistics__
+Summary statistics of the analysis are generated and can be found in the _"output/launch_specific/launch_summary_stats.csv"_ folder.
 
 ## Issues
 If you have any issues with the code, please raise an issue on this repository and I will try to get back to you as soon as possible.
