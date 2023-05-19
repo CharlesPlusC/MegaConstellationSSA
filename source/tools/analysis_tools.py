@@ -8,8 +8,10 @@ import numpy as np
 import datetime
 import json
 from multiprocessing import Pool
-from typing import List
+from typing import List, Dict, Tuple
+from astropy.time import Time
 import scipy as sp
+import scipy.fftpack
 
 #local imports
 from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph, load_satellite_lists
@@ -317,27 +319,24 @@ def add_launch_numbers_to_df(df):
     with open('external/selected_satellites.json', 'r') as f:
         selected_satellites = json.load(f)
 
-    NORAD_IDs = df['NORAD_ID'].astype(int).to_list()  # Convert NORAD_IDs to integers
-    launch_numbers = []
+    # Build a dictionary that maps directly from NORAD_ID to launch_number
+    norad_to_launch = {}
+    for constellation in selected_satellites:
+        for launch in selected_satellites[constellation]:
+            for norad_id in selected_satellites[constellation][launch]:
+                norad_to_launch[norad_id] = int(launch[1:])  # Exclude the "L" and convert to integer
 
-    for NORAD_ID in NORAD_IDs:
-        found = False
-        for constellation in selected_satellites:
-            for launch in selected_satellites[constellation]:
-                if NORAD_ID in selected_satellites[constellation][launch]:
-                    launch_number = int(launch[1:])  # Exclude the "L" and convert to integer
-                    launch_numbers.append(launch_number)
-                    found = True
-                    break
-            if found:
-                break
+    # Now, you can simply use this dictionary to add the launch numbers to the dataframe
+    df['NORAD_ID'] = df['NORAD_ID'].astype(int)
+    df['launch_no'] = df['NORAD_ID'].map(norad_to_launch)
 
-        if not found:
-            raise ValueError(f"NORAD ID {NORAD_ID} not found in selected_satellites")
+    # Check if any NORAD ID was not found in the dictionary
+    if df['launch_no'].isna().any():
+        missing_norad_ids = df.loc[df['launch_no'].isna(), 'NORAD_ID'].tolist()
+        raise ValueError(f"NORAD ID(s) {missing_norad_ids} not found in selected_satellites")
 
-    df['launch_no'] = launch_numbers
     return df
-
+    
 def process_TLE_analysis_file(file: str, TLE_analysis_path: str, oneweb_NORAD_IDs: set, starlink_NORAD_IDs: set) -> pd.DataFrame:
     # read in the TLE analysis .csv file and apply minor processing changes
 
@@ -352,6 +351,8 @@ def process_TLE_analysis_file(file: str, TLE_analysis_path: str, oneweb_NORAD_ID
         df['constellation'] = 'Starlink'
 
     df['master_ephs_sup'] = df['master_ephs_sup'].apply(process_ephemeris_data)
+    df['UTC'] = Time(df['times'].values, format='jd', scale='utc').datetime # convert the times to UTC
+
     df = add_launch_numbers_to_df(df)
 
     # go through the dataframes in OneWeb_dfs and check if the NORAD ID is in the L6 list
@@ -462,13 +463,26 @@ def launch_specific_stats(list_of_dfs, export=True):
         launch_summary_stats.to_csv("output/launch_specific/launch_summary_stats.csv", index=False)
     return launch_summary_stats
 
+def compute_fft(df: pd.DataFrame, diff_type: str) -> Tuple[np.ndarray, np.ndarray]:
+    """
+    Computes the Fast Fourier Transform and related values on given data.
 
-def get_fft(df, diff_type):
-    """Calculate the FFT of the specified difference type in the dataframe."""
+    Args:
+        df (pd.DataFrame): The data frame containing the data on which FFT is to be computed.
+        diff_type (str): The type of difference for which FFT is to be computed.
+
+    Returns:
+        Tuple[np.ndarray, np.ndarray, np.ndarray]: The frequencies, power spectral density, 
+        and an array indicating where the frequencies are greater than 0.
+    """
+    date = df['UTC']
     df = df.set_index('UTC')
     diff = df[diff_type]
+    N = len(diff)
+
     diff_fft = sp.fftpack.fft(diff.values)
     diff_psd = np.abs(diff_fft)**2
-    fftfreqs = sp.fftpack.fftfreq(len(diff_psd), 1./(96))
-    im = fftfreqs > 0
-    return fftfreqs[im], diff_psd[im]
+    fftfreqs = sp.fftpack.fftfreq(len(diff_psd), 1./(96)) #there are 96 15-minute intervals in a day so this gives us the frequencies in days^-1
+    im = fftfreqs >0
+
+    return fftfreqs[im], 10 * np.log10(diff_psd[im])

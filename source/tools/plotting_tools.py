@@ -8,13 +8,18 @@ from matplotlib.patches import Patch
 import matplotlib as mpl
 import json
 from scipy import signal
+from typing import Dict, List
 
+#local imports
+from .analysis_tools import compute_fft
+
+# Set the default font size for the plots
 mpl.rcParams['font.size'] = 11
 
 # Dictionary of colours for the different launches to be consistent across plots
 launch_colour_dict = {'L4': 'xkcd:blue', 'L28': 'xkcd:dark red', 'L5': 'xkcd:azure', 'L36': 'xkcd:orange', 'L6': 'xkcd:light blue', 'L30': 'xkcd:coral'}
 # list of the different types of differences to be plotted
-diff_types = ['l_diffs', 'c_diffs', 'l_diffs', 'cart_pos_diffs'] 
+diff_types = ['h_diffs', 'c_diffs', 'l_diffs', 'cart_pos_diffs'] 
               
 def plot_altitude_timeseries(dfs, json_filepath='external/selected_satellites.json', show=False):
     """
@@ -75,48 +80,68 @@ def plot_altitude_timeseries(dfs, json_filepath='external/selected_satellites.js
     if show:
         plt.show()
 
-def plot_fft_compare(diff_type, launch_data_dict, launch_colour_dict, show = False):
-    figure, axis = plt.subplots(2, 1, figsize = (7, 10))
-    for launch, data in launch_data_dict.items():
-        colour = launch_colour_dict[launch]
-        freqs, psd = signal.welch(data[diff_type], fs=1, nperseg=4096)
-        axis[0].semilogy(freqs, psd, color=colour)
-        axis[1].semilogy(freqs, psd, color=colour)
-        axis[1].legend([Patch(facecolor = colour, edgecolor = colour, label = launch) for launch, colour in launch_colour_dict.items()])
 
-    axis[0].set_xticks(np.arange(0, 10, 1))
-    axis[0].set_xlim(0, 10)
-    axis[0].set_ylim(0, 80)
-    axis[0].grid(True)
+def plot_fft_comparison(list_of_dfs: List[pd.DataFrame], diff_types: List[str] = diff_types, launch_colour_dict: Dict[str, str] = launch_colour_dict, show: bool = True) -> None:
+    """
+    Plots the power spectral density of each dimension (H/C/L/3D) in the differences 
+    between NORAD and operator TLEs for each launch.
     
-    axis[1].set_xticks(np.arange(1, 40, 2))
-    axis[1].set_xlim(0, 40)
-    axis[1].set_ylim(0, 80)
-    axis[1].grid(True)
-    axis[1].set_xlabel('Frequency (1/Day)', fontsize=12)
-    
-    if diff_type == 'l_diffs':
-        figure.suptitle(r'$\Delta$ L: Power Spectral Density Comparison')
-    elif diff_type == 'cart_pos_diffs':
-        figure.suptitle(r'$\Delta$ 3D: Power Spectral Density Comparison')
-    elif diff_type == 'c_diffs':
-        figure.suptitle(r'$\Delta$ C: Power Spectral Density Comparison')
-    elif diff_type == 'h_diffs':
-        figure.suptitle(r'$\Delta$ H: Power Spectral Density Comparison')
+    Args:
+        list_of_dfs (List[pd.DataFrame]): List of dataframes each representing a specific launch.
+        diff_types (List[str]): List of difference types for which the plot needs to be drawn.
+        launch_colour_dict (Dict[str, str]): Dictionary mapping launch id to colour for plotting.
+        show (bool, optional): Flag indicating whether to display the plot. Defaults to True.
 
-    figure.text(0, 0.5, 'Power Spectral Density (dB)', va='center', rotation='vertical')
-    figure.subplots_adjust(hspace=0.5)
-    plt.tight_layout()
+    Returns:
+        None: The function performs plotting operation and does not return any value.
+    """
+    grouped_dfs = {}
+    for df in list_of_dfs:
+        constellation = str(df['constellation'][0])
+        if constellation not in grouped_dfs:
+            grouped_dfs[constellation] = [df]
+        else:
+            grouped_dfs[constellation].append(df)
 
-    plt.savefig('output/plots/Fourier_analysis/fft_compare_' + diff_type + '.png', dpi=300)
-    if show == True:
-        plt.show()
+    # Now loop through each constellation and plot its dataframes
+    for constellation, dfs in grouped_dfs.items():
+        for diff_type in diff_types:
+            figure, axis = plt.subplots(2, 1)
+            figure.set_size_inches(7, 10)
 
-def run_fouier_analysis(diff_types, constellations, launch_data_dict, launch_colour_dict):
-    for diff_type in diff_types:
-        for constellation in constellations:
-            # Assuming that launch_data_dict and launch_colour_dict are dictionaries where the keys are constellations
-            constellation_data = launch_data_dict[constellation]
-            constellation_colour = launch_colour_dict[constellation]
+            for df in dfs:
+                launch = 'L' + str(df['launch_no'][0])
+                col = launch_colour_dict.get(launch, 'black')
+
+                # In the time domain
+                axis[0].scatter(df['times'], df[diff_type], alpha=0.1, s=1, color=col)
+
+                # In the frequency domain
+                diff_fft, diff_psd = compute_fft(df, diff_type)
+                axis[1].plot(diff_fft, diff_psd, alpha=0.2, color=col)
+
+            title_dict = {
+                'l_diffs': r'$\Delta$ L: NORAD- and Operator-TLE Derived positions for {}'.format(constellation),
+                'cart_pos_diffs': r'$\Delta$ 3D: NORAD- and Operator-TLE Derived positions for {}'.format(constellation),
+                'c_diffs': r'$\Delta$ C: NORAD- and Operator-TLE Derived positions for {}'.format(constellation),
+                'h_diffs': r'$\Delta$ H: NORAD- and Operator-TLE Derived positions for {}'.format(constellation)
+            }
+
+            axis[0].set_ylabel('Delta(Km)')
+            axis[1].set_ylabel('Power Spectral Density (dB)')
+            axis[1].set_xlabel('Frequency (days^-1)')
+            axis[0].set_xlabel('Julian Day')
+            axis[1].set_title('Power spectral density of the differences between the TLEs')
+            axis[1].grid(True)
+            axis[0].grid(True)
+            axis[0].set_xlim(np.min(df['times']), np.max(df['times']))
+            axis[0].set_title(title_dict.get(diff_type, ''))
+
+            axis[1].set_xticks(np.arange(1, 40, 2))
+            axis[1].set_xticklabels(np.arange(1, 40, 2))
+            axis[1].set_xlim(0, 40)
+
+            plt.savefig('output/plots/Fourier_analysis/{}_{}_fft.png'.format(constellation, diff_type), dpi=300)
             
-            plot_fft_compare(diff_type, constellation_data, constellation_colour)
+            if show == True:
+                plt.show()
