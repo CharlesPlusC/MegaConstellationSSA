@@ -2,7 +2,7 @@ import os
 import sys
 from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis, TLE_analysis_to_df, launch_specific_stats
 from tools.tletools import load_satellite_lists
-from tools.plotting_tools import plot_altitude_timeseries
+from tools.plotting_tools import plot_altitude_timeseries, plot_fft_comparison
 import cProfile
 import numpy as np
 
@@ -41,7 +41,11 @@ def main ():
     all_dfs = Oneweb_dfs + Starlink_dfs # combine the two lists of dataframes
 
     # calculate the launch-specific stats and store them in .csv file
-    launch_specific_stats(all_dfs)
+    # launch_specific_stats(all_dfs)
+
+    # plot the FFTs for the selected list of dataframes
+    plot_fft_comparison(all_dfs, show=False)
+
 if __name__ == "__main__":
     main()
     
