@@ -1,5 +1,30 @@
 [![HitCount](https://hits.dwyl.com/CharlesPlusC/MegaConstellationSSA.svg?style=flat-square&show=unique)](http://hits.dwyl.com/CharlesPlusC/MegaConstellationSSA)
 
+<p align="center">
+  <img src="misc/UCL-logo-black.png" alt="University Logo" width="200"> 
+  <img src="misc/SGNL_logo_ColouronBlack.jpg" alt="Research Group Logo" width="200">
+</p>
+
+<h3 align="center">MegaConstellationSSA</h3>
+
+<p align="center">
+  Code repository accompanying the paper: _C.Constant, S.Bhattarai, M.Ziebart_ "On the Limits of Current Practices in Uncooperative Space Surveillance: Analysis of Mega-Constellation Data Time-Series"(2023)
+  <br />
+  <a href="https://your-link.com"><strong>Explore the docs »</strong></a>
+  <br />
+  <br />
+  <a href="https://github.com/your-username/MegaConstellationSSA/issues">Report Bug</a>
+  ·
+  <a href="https://github.com/your-username/MegaConstellationSSA/issues">Request Feature</a>
+</p>
+
+<details open="open">
+  <summary><h2 style="display: inline-block">Table of Contents</h2></summary>
+  <ol>
+    <li>
+      <a href="#about-the-project">About The Project</a>
+      <ul>
+        <li><a href="#collaboration-statement">Collaboration Statement</a></li>
 
 # MegaConstellationSSA
 Code repository accompanying the paper: _C.Constant, S.Bhattarai, M.Ziebart_ "On the Limits of Current Practices in Uncooperative Space Surveillance: Analysis of Mega-Constellation Data Time-Series"(2023) 
