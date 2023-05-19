@@ -37,8 +37,10 @@ password = YourPassword
 5. Ensure that this file is in the .gitignore file so that it is not uploaded to the repository (it should be by default)
 6. Run the code in main.py for the full analysis
 
-## Information
-The following code reads in all TLEs available for each spacecraft and propagates them using the SGP4 propagator. The orbit state is continuously updated with new TLEs as these become available. The outline of the algorithm that performs this is as follows:
+## Information:
+
+__SGP4 Update Algorithm:__
+The state vectors for each spacecraft orbit are continuously updated with new TLEs as these become available. The outline of the algorithm that performs this is as follows:
 ![TLE Algorithm](TLE_algo_outline.png)
 
 ## Data
