@@ -1,7 +1,8 @@
+
 [![HitCount](https://hits.dwyl.com/CharlesPlusC/MegaConstellationSSA.svg?style=flat-square&show=unique)](http://hits.dwyl.com/CharlesPlusC/MegaConstellationSSA)
 
 <p align="center">
-  <img src="misc/UCL-logo-black.png" alt="University Logo" width="200"> 
+  <img src="misc/UCL-logo-black.png" alt="University Logo" width="200"><br/>
   <img src="misc/SGNL_logo_ColouronBlack.jpg" alt="Research Group Logo" width="200">
 </p>
 
@@ -10,21 +11,20 @@
 <p align="center">
   Code repository accompanying the paper: C.Constant, S.Bhattarai, M.Ziebart "On the Limits of Current Practices in Uncooperative Space Surveillance: Analysis of Mega-Constellation Data Time-Series"(2023)
   <br />
-  <a href="https://github.com/your-username/MegaConstellationSSA/issues">Report Bug</a>
+  <a href="https://github.com/CharlesPlusC/MegaConstellationSSA/issues">Report Bug</a>
   ·
-  <a href="https://github.com/your-username/MegaConstellationSSA/issues">Request Feature</a>
+  <a href="https://github.com/CharlesPlusC/MegaConstellationSSA/pulls">Request Feature</a>
 </p>
 
-<details open="open">
-  <summary><h2 style="display: inline-block">Table of Contents</h2></summary>
-  <ol>
-    <li>
-      <a href="#about-the-project">About The Project</a>
-      <ul>
-        <li><a href="#collaboration-statement">Collaboration Statement</a></li>
-
-# MegaConstellationSSA
-Code repository accompanying the paper: _C.Constant, S.Bhattarai, M.Ziebart_ "On the Limits of Current Practices in Uncooperative Space Surveillance: Analysis of Mega-Constellation Data Time-Series"(2023) 
+## Table of Contents
+* [About the Project](#about-the-project)
+* [Collaboration Statement](#collaboration-statement)
+* [Instructions for Use](#instructions-for-use)
+* [Information](#information)
+* [Data](#data)
+* [Outputs](#outputs)
+* [Issues](#issues)
+* [Environment](#environment)
 
 ## Short Abstract:
 The rapid increase of objects in Low Earth Orbit (LEO) has underscored the need for advanced Space Traffic Management (STM) practices. The effectiveness of STM largely depends on accurately determining object orbits in densely populated satellite neighborhoods. In this light, our study aims to bridge the gap between current practices and STM requirements by emphasizing the imperative role of Space Situational Awareness (SSA) data quality, especially its precision, accuracy, and timeliness.
