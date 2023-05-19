@@ -33,7 +33,8 @@ password = YourPassword
 
 __SGP4 Update Algorithm:__
 The state vectors for each spacecraft orbit are continuously updated with new TLEs as these become available. The outline of the algorithm that performs this is as follows:
-![TLE Algorithm](TLE_algo_outline.png)
+
+<img src="TLE_algo_outline.png" width="50%" height="50%">
 
 ## Data
 - The data for the SUP_TLEs and NORAD_TLEs are already provided to save time. 
