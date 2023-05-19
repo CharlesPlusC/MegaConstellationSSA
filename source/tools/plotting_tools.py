@@ -75,7 +75,6 @@ def plot_altitude_timeseries(dfs, json_filepath='external/selected_satellites.js
     if show:
         plt.show()
 
-
 def plot_fft_compare(diff_type, launch_data_dict, launch_colour_dict, show = False):
     figure, axis = plt.subplots(2, 1, figsize = (7, 10))
     for launch, data in launch_data_dict.items():
