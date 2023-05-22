@@ -624,6 +624,5 @@ def sup_gp_op_benchmark():
             triple_ephem_df['mjd_time'] = triple_ephem_df['jd_time'] - 2400000.5
 
         all_triple_ephems.append(triple_ephem_df)
-    print("all_triple_ephems is: ", all_triple_ephems)
-    return all_triple_ephems
+    return all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list
 

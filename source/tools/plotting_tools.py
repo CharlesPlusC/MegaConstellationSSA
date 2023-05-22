@@ -15,7 +15,8 @@ from collections import defaultdict
 
 
 #local imports
-from .analysis_tools import compute_fft
+from .conversions import jd_to_mjd
+from .analysis_tools import compute_fft, sup_gp_op_benchmark
 
 # Set the default font size for the plots
 mpl.rcParams['font.size'] = 11
@@ -587,8 +588,6 @@ def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int 
             max_diff = mean_mean_diff + criteria*mean_std_diff
             min_diff = mean_mean_diff - criteria*mean_std_diff
 
-            print("constellation: ", constellationname)
-
             # make a new dataframe with only the values of diff_type that are within plus or minus `criteria` standard deviations of the mean
             criteria_df_list = []
             for df in df_group:
@@ -638,6 +637,221 @@ def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int 
                 plt.show()
             plt.close()  # close the plot after saving to avoid overlapping
 
+
+def extract_norad_ids(gp_list):
+    return [gp_path[-9:-4] for gp_path in gp_list]
+
+def configure_plot_attributes(axis, color, time, value, line_style, line_width):
+    for index in range(len(time)):
+        axis.axvline(x=time[index], color=color, linestyle=line_style, linewidth=line_width)
+
+def configure_subplot(axis, color, title, time, value, y_label, sup_time, gp_time):
+    axis.plot(time, value, label='GP', color=color)
+    axis.grid(True)
+    configure_plot_attributes(axis, color, sup_time, value, 'dotted', 2)
+    configure_plot_attributes(axis, color, gp_time, value, 'dotted', 2)
+
+def benchmark_plot():
+    # get benchmark data
+    all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list = sup_gp_op_benchmark()
+    # TODO: see if i can get all_sup_tle_epochs, all_gp_tle_epochs, gp_list from all_triple_ephems instead of passing giant lists around.
+
+    # slice all_triple_ephems to be left with the first 7/8rds of the data in each dataframe
+    all_triple_ephems = [ephem[:int(len(ephem)*(7/8))] for ephem in all_triple_ephems]
+
+    # convert all_sup_tle_epochs and all_gp_tle_epochs to mjd_time
+    all_sup_tle_epochs = list(map(jd_to_mjd, all_sup_tle_epochs))
+    all_gp_tle_epochs = list(map(jd_to_mjd, all_gp_tle_epochs))
+
+    # Extract NORAD IDs from the GP ephemeris files
+    NORAD_IDs = extract_norad_ids(gp_list)
+
+    fig, ax = plt.subplots(4, len(all_triple_ephems), figsize=(4*len(all_triple_ephems), 6))
+
+    GP_colour = 'xkcd:blue'
+    SUP_colour = 'xkcd:coral'
+
+    fonts = 12
+
+    for i in range(len(all_triple_ephems)):
+        # For each NORAD ID, plot h, c, l, and 3D position differences against jd_time for both GP and SUP
+        if i == 0:
+            ax[0, i].set_ylabel(r'$\Delta$ H (km)', fontsize=fonts)
+        else:
+            ax[0, i].set_yticklabels([])
+
+        configure_subplot(ax[0, i], GP_colour, 'NORAD ID: ' + NORAD_IDs[i], all_triple_ephems[i]['mjd_time'].values,
+                        all_triple_ephems[i]['gp_h_diff'].values, r'$\Delta$ H (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
+
+        if i == 0:
+            ax[1, i].set_ylabel(r'$\Delta$ C (km)', fontsize=fonts)
+        else:
+            ax[1, i].set_yticklabels([])
+
+        configure_subplot(ax[1, i], GP_colour, '', all_triple_ephems[i]['mjd_time'].values,
+                        all_triple_ephems[i]['gp_c_diff'].values, r'$\Delta$ C (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
+
+        if i == 0:
+            ax[2, i].set_ylabel(r'$\Delta$ L (km)', fontsize=fonts)
+        else:
+            ax[2, i].set_yticklabels([])
+
+        configure_subplot(ax[2, i], GP_colour, '', all_triple_ephems[i]['mjd_time'].values,
+                        all_triple_ephems[i]['gp_l_diff'].values, r'$\Delta$ L (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
+
+        if i == 0:
+            ax[3, i].set_ylabel(r'$\Delta$ 3D (km)', fontsize=fonts)
+        else:
+            ax[3, i].set_yticklabels([])
+
+        configure_subplot(ax[3, i], GP_colour, '', all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['gp_3d_diff'].values, r'$\Delta$ 3D (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
+
+
+    handles, labels = ax[0, 0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc='center right', ncol=1, fontsize=fonts)
+
+    plt.tight_layout()
+    plt.savefig('output/plots/benchmark/SUPvsGPvsOp_06022023.png', dpi=600)
+
+    plt.show()
+
+
+# def benchmark_plot():
+#     all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list = sup_gp_op_benchmark()
+#     # slice all_triple_ephems so as to be left with the first 7/8rds of the data in each dataframe
+#     for i in range(len(all_triple_ephems)):
+#         all_triple_ephems[i] = all_triple_ephems[i][:int(len(all_triple_ephems[i])*(7/8))]
+
+#     #convert all_sup_tle_epochs and all_gp_tle_epochs to mjd_time
+#     for i in range(len(all_sup_tle_epochs)):
+#         all_sup_tle_epochs[i] = [i - 2400000.5 for i in all_sup_tle_epochs[i]]
+
+#     for i in range(len(all_gp_tle_epochs)):
+#         all_gp_tle_epochs[i] = [i - 2400000.5 for i in all_gp_tle_epochs[i]]
+
+#     for i in range(len(all_triple_ephems)):
+#         print(len(all_triple_ephems[i]))
+#         #assert they are all the same length
+#         # assert len(all_triple_ephems[i]) == len(all_sup_tle_epochs[i]) == len(all_gp_tle_epochs[i])
+
+#     #get a list of NORAD IDs from the GP ephemeris files
+#     NORAD_IDs = []
+#     for gp_path in gp_list:
+#         NORAD_IDs.append(gp_path[-9:-4])
+
+#     ### Plot all the data in all_triple_ephems (4 subplot plots per NORAD dataset so 4*len(all_triple_ephems) plots total)
+#     fig, ax = plt.subplots(4, len(all_triple_ephems), figsize=(4*len(all_triple_ephems), 6))
+
+#     GP_colour = 'xkcd:blue'
+#     SUP_colour = 'xkcd:coral'
+
+#     fonts = 12
+#     for i in range(len(all_triple_ephems)):
+#         # for each NORAD ID plot h, c, l, and 3D position differences against jd_time for both GP and SUP
+#         #only include y-axis labels for the first plot
+#         if i == 0:
+#             ax[0, i].set_ylabel(r'$\Delta$ H (km)', fontsize=fonts)
+#         # else remove the tick labels
+#         else:
+#             ax[0, i].set_yticklabels([])
+#         ax[0, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['gp_h_diff'].values, label='GP', color=GP_colour)
+#         ax[0, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['sup_h_diff'].values, label='SUP', color=SUP_colour)
+#         # add vertical dotted thin lines for each element in the list all_sup_tle_epochs[i]
+#         for j in range(len(all_sup_tle_epochs[i])):
+#             ax[0, i].axvline(x=all_sup_tle_epochs[i][j], color=SUP_colour, linestyle='dotted', linewidth=2)
+#         # same for GP
+#         for j in range(len(all_gp_tle_epochs[i])):
+#             ax[0, i].axvline(x=all_gp_tle_epochs[i][j], color=GP_colour, linestyle='dotted', linewidth=2)
+#         ax[0, i].grid(True)
+#         #remove x-axis labels
+#         ax[0, i].set_xticklabels([])
+#         ax[0, i].set_title('NORAD ID: ' + NORAD_IDs[i].values, fontsize=fonts)
+#         # for the y labels to be from -0.25 to 0.25
+#         ax[0, i].set_ylim(-0.5, 0.5)
+#         # set x-axis limits to be the max and min of the mjd_time column
+#         ax[0, i].set_xlim(min(all_triple_ephems[i]['mjd_time']), max(all_triple_ephems[i]['mjd_time']))
+
+#         if i == 0:
+#             ax[1, i].set_ylabel(r'$\Delta$ C (km)', fontsize=fonts)
+#         # else remove the tick labels
+#         else:
+#             ax[1, i].set_yticklabels([])
+#         ax[1, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['gp_c_diff'].values, label='GP', color=GP_colour)
+#         ax[1, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['sup_c_diff'].values, label='SUP', color=SUP_colour)
+#         # add vertical dotted thin lines for each element in the list all_sup_tle_epochs[i]
+#         for j in range(len(all_sup_tle_epochs[i])):
+#             ax[1, i].axvline(x=all_sup_tle_epochs[i][j], color=SUP_colour, linestyle='dotted', linewidth=2)
+#         # same for GP
+#         for j in range(len(all_gp_tle_epochs[i])):
+#             ax[1, i].axvline(x=all_gp_tle_epochs[i][j], color=GP_colour, linestyle='dotted', linewidth=2)
+#         ax[1, i].set_xticklabels([])
+#         ax[1, i].grid(True)
+#         # set x-axis limits to be the max and min of the mjd_time column
+#         ax[1, i].set_xlim(min(all_triple_ephems[i]['mjd_time']), max(all_triple_ephems[i]['mjd_time']))
+#         # for the y labels to be from -0.6 to 0.6
+#         # ax[1, i].set_ylim(-0.5, 0.5)
+
+
+#         if i == 0:
+#             ax[2, i].set_ylabel(r'$\Delta$ L (km)', fontsize=fonts)
+#         # else remove the tick labels
+#         else:
+#             ax[2, i].set_yticklabels([])
+#         ax[2, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['gp_l_diff'].values, label='GP', color=GP_colour)
+#         ax[2, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['sup_l_diff'].values, label='SUP', color=SUP_colour)
+#         # add vertical dotted thin lines for each element in the list all_sup_tle_epochs[i]
+#         for j in range(len(all_sup_tle_epochs[i])):
+#             ax[2, i].axvline(x=all_sup_tle_epochs[i][j], color=SUP_colour, linestyle='dotted', linewidth=2)
+#         # same for GP
+#         for j in range(len(all_gp_tle_epochs[i])):
+#             ax[2, i].axvline(x=all_gp_tle_epochs[i][j], color=GP_colour, linestyle='dotted', linewidth=2)
+#         ax[2, i].set_xticklabels([])
+#         ax[2, i].grid(True)
+#         ax[2, i].set_ylim(-5, 5)
+#         # set x-axis limits to be the max and min of the mjd_time column
+#         ax[2, i].set_xlim(min(all_triple_ephems[i]['mjd_time']), max(all_triple_ephems[i]['mjd_time']))
+
+#         if i == 0:
+#             ax[3, i].set_ylabel(r'$\Delta$ 3D (km)', fontsize=fonts)
+#         # else remove the tick labels
+#         else:
+#             ax[3, i].set_yticklabels([])
+#         ax[3, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['gp_cart_pos_diff'].values, label='GP', color=GP_colour)
+#         ax[3, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['sup_cart_pos_diff'].values, label='SUP', color=SUP_colour)
+#         # add vertical dotted thin lines for each element in the list all_sup_tle_epochs[i]
+#         for j in range(len(all_sup_tle_epochs[i])):
+#             ax[3, i].axvline(x=all_sup_tle_epochs[i][j], color=SUP_colour, linestyle='dotted', linewidth=2)
+#         # same for GP
+#         for j in range(len(all_gp_tle_epochs[i])):
+#             ax[3, i].axvline(x=all_gp_tle_epochs[i][j], color=GP_colour, linestyle='dotted', linewidth=2)
+#         # calculate the RMS of the differences
+#         gp_rms = np.sqrt(np.mean(np.square(all_triple_ephems[i]['gp_cart_pos_diff'])))
+#         sup_rms = np.sqrt(np.mean(np.square(all_triple_ephems[i]['sup_cart_pos_diff'])))
+#         gp_mean = np.mean(all_triple_ephems[i]['gp_cart_pos_diff'])
+#         sup_mean = np.mean(all_triple_ephems[i]['sup_cart_pos_diff'])
+#         # add a little text box with the RMS values
+#         textstr = 'GP mean: ' + str(round(gp_mean, 2)) + ' km \n SUP mean: ' + str(round(sup_mean, 2)) + ' km'
+#         # props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+#         # ax[3, i].text(0.45, 0.9, textstr, transform=ax[3, i].transAxes, fontsize=fonts, verticalalignment='top', bbox=props)
+#         ax[3, i].set_title(textstr, fontsize=fonts)
+#         ax[3, i].grid(True)
+#         ax[3, i].set_ylim(0, 5)
+#         # set ticks every 2.5 on the y axis
+#         ax[3, i].yaxis.set_ticks(np.arange(0, 5.1, 2.5))
+#         # set x-axis limits to be the max and min of the mjd_time column
+#         ax[3, i].set_xlim(min(all_triple_ephems[i]['mjd_time']), max(all_triple_ephems[i]['mjd_time']))
+#         # include a common x label for the bottom row make it not scientific notation
+#         ax[3, i].set_xlabel('MJD Time', fontsize=fonts)
+#         ax[3, i].ticklabel_format(style='plain', axis='x', scilimits=(0,0)) 
+
+#     # include one legend for the whole figure but only for the lines in the first plot
+#     handles, labels = ax[0, 0].get_legend_handles_labels()
+#     fig.legend(handles, labels, loc='center right', ncol=1, fontsize=fonts)
+
+#     plt.tight_layout()
+#     plt.savefig('output/plots/benchmark/SUPvsGPvsOp_06022023.png', dpi=600)
+
+#     plt.show()
 
 if __name__ == "__main__":
     pass

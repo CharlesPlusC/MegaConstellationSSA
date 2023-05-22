@@ -2,7 +2,7 @@ import os
 import sys
 from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis, TLE_analysis_to_df, launch_specific_stats, sup_gp_op_benchmark
 from tools.tletools import load_satellite_lists
-from tools.plotting_tools import plot_altitude_timeseries, plot_fft_comparison, plot_diff_subplots, plot_diff_hist, plot_launch_latlon_diffs, plot_ground_tracks, plot_map_diffs_smallvals_all
+from tools.plotting_tools import plot_altitude_timeseries, plot_fft_comparison, plot_diff_subplots, plot_diff_hist, plot_launch_latlon_diffs, plot_ground_tracks, plot_map_diffs_smallvals_all, benchmark_plot
 import cProfile
 import numpy as np
 
@@ -59,7 +59,7 @@ def main ():
     # Plot the difference between the NORAD and SUP TLEs projected onto the ground track
     # plot_map_diffs_smallvals_all(all_dfs, show=False, criteria=1) #errors within 1 SD from the mean
 
-    sup_gp_op_benchmark()
+    benchmark_plot()
 
 if __name__ == "__main__":
     main()

@@ -288,6 +288,9 @@ def doy_to_dom_month(year, doy):
     month = d.month
     return day_of_month, month
 
+def jd_to_mjd(value_list):
+    return [value - 2400000.5 for value in value_list]
+
 def parse_spacex_datetime_stamps(timestamps):
     """Parse SpaceX ephemeris datetime stamps into year, day of year, hour, minute, second."""
     
