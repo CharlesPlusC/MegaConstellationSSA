@@ -30,17 +30,29 @@ with open(json_filepath, 'r') as f:
     selected_satellites = json.load(f)
               
 def plot_altitude_timeseries(dfs: List[pd.DataFrame], show: bool = False) -> None:
-    """Plots altitude time series for different satellites from given dataframes.
+    """
+    Generate a time series plot of satellite altitudes.
 
-    Args:
-        dfs (List[pd.DataFrame]): A list of pandas DataFrames, each containing data for a different satellite.
-        show (bool, optional): Whether to display the plot. Defaults to False.
-    
-    Returns:
-        None
+    This function generates a scatter plot of satellite altitudes as a function of time, with each 
+    satellite represented as a different series on the plot. The plot is saved to a specific directory
+    and optionally displayed. 
 
-    Raises:
-        None
+    Parameters
+    ----------
+    dfs : list of pandas.DataFrame
+        A list of dataframes, each containing satellite data for a unique satellite. 
+        The columns should include 'NORAD_ID', 'eph_alts_sup', and 'times'.
+    show : bool, optional
+        If True, the plot is displayed; otherwise, it is only saved. Defaults to False.
+
+    Returns
+    -------
+    None.
+
+    Notes
+    -----
+    The function saves the generated plot to the 'output/plots/altitude/' directory and additionally 
+    displays it if `show` is set to True.
     """
 
     sat_nums = []
@@ -90,22 +102,36 @@ def plot_altitude_timeseries(dfs: List[pd.DataFrame], show: bool = False) -> Non
     if show:
         plt.show()
 
-
 def plot_fft_comparison(list_of_dfs: List[pd.DataFrame], diff_types: List[str] = diff_types, launch_colour_dict: Dict[str, str] = launch_colour_dict, show: bool = True) -> None:
     """
-    Plots the frequency and power spectral density  of each dimension (H/C/L/3D) time-series in the differences 
-    between NORAD and operator TLEs for each launch.
-    
-    Args:
-        list_of_dfs (List[pd.DataFrame]): List of dataframes each representing a specific launch.
-        diff_types (List[str]): List of difference types for which the plot needs to be drawn.
-        launch_colour_dict (Dict[str, str]): Dictionary mapping launch id to colour for plotting.
-        show (bool, optional): Flag indicating whether to display the plot. Defaults to True.
+    Generate a plot of the power spectral density (Fourier analysis) of the differences between NORAD 
+    and operator TLEs for each launch.
 
-    Returns:
-        None: The function performs plotting operation and does not return any value.
+    This function generates a plot in both time and frequency domains for the specified difference types. 
+    Each launch is represented by a different series on the plot. The plots are saved to a specific directory
+    and optionally displayed. 
+
+    Parameters
+    ----------
+    list_of_dfs : list of pandas.DataFrame
+        A list of dataframes, each containing data for a specific launch. 
+        The columns should include 'times', 'constellation', and the difference types.
+    diff_types : list of str, optional
+        The types of differences to be plotted. Defaults to the global `diff_types`.
+    launch_colour_dict : dict, optional
+        A dictionary mapping launch ids to colors for plotting. Defaults to the global `launch_colour_dict`.
+    show : bool, optional
+        If True, the plots are displayed; otherwise, they are only saved. Defaults to True.
+
+    Returns
+    -------
+    None.
+
+    Notes
+    -----
+    The function saves the generated plots to the 'output/plots/Fourier_analysis/' directory and additionally 
+    displays them if `show` is set to True.
     """
-
     grouped_dfs = {}
     for df in list_of_dfs:
         constellation = str(df['constellation'][0])
@@ -160,21 +186,40 @@ def plot_fft_comparison(list_of_dfs: List[pd.DataFrame], diff_types: List[str] =
 def plot_diff_subplots(sats_dataframe: List[pd.DataFrame],
                        diffs: Union[str, List[str]] = 'all',
                        show: bool = True) -> None:
-    """Plot subplots of the specified differences for satellite data.
-
-    Args:
-        sats_dataframe (List[pd.DataFrame]): A list of pandas DataFrames containing satellite data.
-        diffs (Union[str, List[str]], optional): The differences to plot subplots for.
-            If 'all', plots subplots for all available differences. Defaults to 'all'.
-        show (bool, optional): Whether to display the plot. Defaults to True.
-    
-    Returns:
-        None
-
-    Raises:
-        Exception: If launch key is not found in launch_colour_dict.
-
     """
+    Generate subplots for specified differences in satellite data per constellation.
+
+    This function generates a grid of subplots for specified differences, or all available differences if 'all' 
+    is specified. Each satellite's difference data is plotted in a separate subplot, with the satellites grouped 
+    by constellation. 
+
+    Parameters
+    ----------
+    sats_dataframe : list of pandas.DataFrame
+        A list of dataframes, each containing satellite data. 
+    diffs : str or list of str, optional
+        The differences to plot subplots for. If 'all', plots subplots for all available differences. 
+        Otherwise, it should be a list of keys corresponding to the difference columns in the dataframes. 
+        Defaults to 'all'.
+    show : bool, optional
+        If True, the plot is displayed; otherwise, it is only saved. Defaults to True.
+
+    Returns
+    -------
+    None.
+
+    Raises
+    ------
+    Exception:
+        If a launch key from the dataframes is not found in the 'launch_colour_dict'.
+
+    Notes
+    -----
+    The function saves the generated plot(s) to the 'output/plots/timeseries_subplots/' directory and additionally 
+    displays them if `show` is set to True. Each subplot includes statistical data (mean and standard deviation) 
+    presented as text and uses color to distinguish different satellite launches.
+    """
+
     constellation_dict = {}
     for df in sats_dataframe:
         constellation = df['constellation'][0]
@@ -253,20 +298,39 @@ def plot_diff_subplots(sats_dataframe: List[pd.DataFrame],
 def plot_diff_hist(sats_dataframe_list: List[pd.DataFrame],
                    diffs: Union[str, List[str]] = 'all',
                    show: bool = False) -> None:
-    """Plot histograms of the specified differences for satellite data.
+    """
+    Generate histograms for specified differences in satellite data.
 
-    Args:
-        sats_dataframe_list (List[pd.DataFrame]): A list of pandas DataFrames containing satellite data.
-        diffs (Union[str, List[str]], optional): The differences to plot histograms for.
-            If 'all', plots histograms for all available differences. Defaults to 'all'.
-        show (bool, optional): Whether to display the plot. Defaults to False.
-    
-    Returns:
-        None
+    This function generates histograms for a list of specified differences or all available differences if 'all'
+    is specified. Each difference is plotted in a separate subplot, and the data is segmented by the satellite 
+    constellation. The histogram also includes statistical data (mean and standard deviation) presented as text
+    in each subplot.
 
-    Raises:
-        None
+    Parameters
+    ----------
+    sats_dataframe_list : list of pandas.DataFrame
+        A list of dataframes, each containing satellite data, including differences in height (h_diffs), 
+        cross-track (c_diffs), along-track (l_diffs), and 3D Cartesian position (cart_pos_diffs).
+    diffs : str or list of str, optional
+        The differences to plot histograms for. If 'all', plots histograms for all available differences. 
+        Otherwise, it should be a list of keys corresponding to the difference columns in the dataframes. 
+        Defaults to 'all'.
+    show : bool, optional
+        If True, the plot is displayed, otherwise it is only saved. Defaults to False.
 
+    Returns
+    -------
+    None.
+
+    Notes
+    -----
+    The function saves the generated plot(s) to the 'output/plots/histograms/' directory and additionally displays
+    them if `show` is set to True.
+
+    Raises
+    ------
+    KeyError:
+        If the keys of `constellation_colour_dict` do not align with the constellation identifiers in the dataframes.
     """
     fig, axs = plt.subplots(2, 2, figsize=(8, 5))
 
@@ -320,6 +384,39 @@ def plot_diff_hist(sats_dataframe_list: List[pd.DataFrame],
         plt.show()
 
 def plot_launch_latlon_diffs(sats_dataframe_list: List[pd.DataFrame] = [], show=False, criteria=1):
+    """
+    Generate scatter plots of latitude and longitude differences for satellites from various launches. 
+
+    This function generates a subplot for each unique launch found in the dataframes within `sats_dataframe_list`, 
+    plotting the differences in latitude and longitude for each satellite in that launch. The differences plotted 
+    are filtered based on a certain criterion, only including values within `criteria` standard deviations of the mean.
+
+    Parameters
+    ----------
+    sats_dataframe_list : list of pandas.DataFrame, optional
+        List of dataframes, each containing satellite information including 'lats', 'lons', 'launch_no', 
+        and 'constellation'. Defaults to an empty list.
+    show : bool, optional
+        If True, the plot is displayed, otherwise it is only saved. Defaults to False.
+    criteria : int, optional
+        Number of standard deviations from the mean within which to include difference values. Defaults to 1.
+
+    Returns
+    -------
+    None.
+
+    Notes
+    -----
+    The function saves the generated plot(s) to the 'output/plots/latlon/' directory and additionally displays
+    them if `show` is set to True. The subplot layout is currently specific to a 2x3 configuration.
+
+    Raises
+    ------
+    KeyError:
+        If the keys of `launch_colour_dict` do not align with the launch identifiers in the dataframes.
+
+    """
+
     #NOTE: this is specific to a 2*3 subplot layout
     #TODO: make this more general
 
@@ -368,7 +465,38 @@ def plot_launch_latlon_diffs(sats_dataframe_list: List[pd.DataFrame] = [], show=
         plt.show()
 
 def plot_ground_tracks(list_of_dfs: List[pd.DataFrame] = [], show: bool = False):
+    """
+    Generate a plot of satellite ground tracks for selected launches from different constellations. 
 
+    The function reads in a list of dataframes, each representing a satellite with its geographic coordinates 
+    over time. It then plots the ground track for each satellite on a Basemap plot. The dataframes in 
+    `list_of_dfs` should contain columns 'lons', 'lats' and 'launch_no'. The color of each satellite's ground 
+    track is determined by its associated launch, as defined in the `launch_colour_dict`. The launch information 
+    is loaded from an external JSON file.
+
+    Parameters
+    ----------
+    list_of_dfs : list of pandas.DataFrame, optional
+        List of dataframes each containing satellite information including 'lons', 'lats' and 'launch_no'. 
+        Defaults to an empty list.
+    show : bool, optional
+        If True, the plot is displayed, otherwise it is only saved. Defaults to False.
+
+    Returns
+    -------
+    None.
+
+    Notes
+    -----
+    The function saves the generated plot to 'output/plots/ground_tracks/g_tracks.png' and additionally 
+    displays it if `show` is set to True.
+    
+    Raises
+    ------
+    KeyError:
+        If the keys of `launch_colour_dict` do not align with the launch identifiers in the JSON file.
+
+    """
     # Load selected satellites from JSON file
     json_filepath = 'external/selected_satellites.json'
     with open(json_filepath, 'r') as f:
