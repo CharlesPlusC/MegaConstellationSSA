@@ -2,7 +2,7 @@ import os
 import sys
 from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis, TLE_analysis_to_df, launch_specific_stats
 from tools.tletools import load_satellite_lists
-from tools.plotting_tools import plot_altitude_timeseries, plot_fft_comparison, plot_diff_subplots, plot_diff_hist, plot_launch_latlon_diffs, plot_ground_tracks
+from tools.plotting_tools import plot_altitude_timeseries, plot_fft_comparison, plot_diff_subplots, plot_diff_hist, plot_launch_latlon_diffs, plot_ground_tracks, plot_map_diffs_smallvals_all
 import cProfile
 import numpy as np
 
@@ -53,7 +53,12 @@ def main ():
     # plot_launch_latlon_diffs(all_dfs, show=False, criteria=1) #errors within 1 SD from the mean 
     # plot_launch_latlon_diffs(all_dfs, show=False, criteria=2) #errors within 2 SD from the mean 
 
-    plot_ground_tracks(all_dfs, show=True)
+    # Plot the ground tracks for the selected list of dataframes
+    # plot_ground_tracks(all_dfs, show=True)
+
+    # Plot the difference between the NORAD and SUP TLEs projected onto the ground track
+    plot_map_diffs_smallvals_all(all_dfs, show=False, criteria=1) #errors within 1 SD from the mean
+
 if __name__ == "__main__":
     main()
     
