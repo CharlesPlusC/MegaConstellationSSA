@@ -21,8 +21,13 @@ launch_colour_dict = {'L4': 'xkcd:blue', 'L28': 'xkcd:dark red', 'L5': 'xkcd:azu
 constellation_colour_dict = {'oneweb': 'xkcd:azure', 'starlink': 'xkcd:coral'}
 # list of the different types of differences to be plotted
 diff_types = ['h_diffs', 'c_diffs', 'l_diffs', 'cart_pos_diffs'] 
+
+# Mapping of satellite numbers to constellations and launch numbers
+json_filepath='external/selected_satellites.json'
+with open(json_filepath, 'r') as f:
+    selected_satellites = json.load(f)
               
-def plot_altitude_timeseries(dfs, json_filepath='external/selected_satellites.json', show=False):
+def plot_altitude_timeseries(dfs, show=False):
     """
     Plots altitude time series for different satellites from given dataframes.
 
@@ -30,9 +35,6 @@ def plot_altitude_timeseries(dfs, json_filepath='external/selected_satellites.js
     dfs (list): A list of pandas DataFrames, each containing data for a different satellite.
     json_filepath (str): The path to the JSON file containing the selected satellite numbers.
     """
-
-    with open(json_filepath, 'r') as f:
-        selected_satellites = json.load(f)
 
     sat_nums = []
     for df in dfs:
@@ -278,17 +280,24 @@ def plot_diff_hist(sats_dataframe_list, diffs='all', show=False):
         plt.show()
 
 def plot_launch_latlon_diffs(sats_dataframe_list: List[pd.DataFrame] = [], show=False, criteria=1):
-
+    
     latslons = ['lats', 'lons']
 
-    # Create a figure with as many subplots as there are unique launches
-    launches = ['L' + str(df['launch_no'][0]) for df in sats_dataframe_list]
-    unique_launches = set(launches)
-    fig, axs = plt.subplots(1, len(unique_launches), figsize=(5*len(unique_launches), 5))
+    # Determine the unique constellations and launches from the JSON data
+    constellations = list(selected_satellites.keys())
+    launches = list(set([launch for const in constellations for launch in selected_satellites[const].keys()]))
 
-    # Create a dictionary mapping each unique launch to an axis
-    launch_to_axis = {launch: axis for launch, axis in zip(unique_launches, axs)}
+    # Create a subplots grid
+    fig, axs = plt.subplots(len(constellations), len(launches), figsize=(5*len(launches), 5*len(constellations)))
+    
+    # One row per constellation
+    no_rows = len(constellations)
+    # number of cols is the maximum number of launches in a constellation
+    no_cols = max([len(selected_satellites[const].keys()) for const in constellations])
+    
+    # keep the extra plots blank if there are less launches for one of the constellation
 
+    
     for latlon in latslons:
         for diff in diff_types:
             for df in sats_dataframe_list:
@@ -299,26 +308,27 @@ def plot_launch_latlon_diffs(sats_dataframe_list: List[pd.DataFrame] = [], show=
                 
                 # Assign a color based on the launch
                 launch = 'L' + str(df['launch_no'][0])
+                constellation = df['constellation'][0]
                 color = launch_colour_dict[launch]
                 
-                # Create subplot title
-                title = f"{df['constellation'][0]} {launch}"
+                # Only plot the data if this constellation-launch combination exists in the JSON data
+                if launch in selected_satellites.get(constellation, {}):
+                    # Get the correct axis for this constellation and launch
+                    row = constellation_to_axis_row[constellation]
+                    col = launch_to_axis_col[launch]
+                    axis = axs[row, col]
 
-                # Get the correct axis for this launch
-                axis = launch_to_axis[launch]
+                    # Plot the data
+                    axis.scatter(df_filtered[latlon], df_filtered[diff], alpha=0.3, s=0.8, color=color)
+                    axis.set_title(f"Δ {diff} vs {latlon.capitalize()}, {criteria}σ")
+                    axis.set_xlabel(f'{latlon.capitalize()} (Degrees)')
+                    axis.grid(True)
 
-                # Plot the data
-                axis.scatter(df_filtered[latlon], df_filtered[diff], alpha=0.3, s=0.8, color=color)
-                axis.set_title(title)
-                axis.set_xlabel(f'{latlon.capitalize()} (Degrees)')
-                axis.grid(True)
-
-                plt.tight_layout()
-        plt.savefig('output/plots/latlon_diffs/'+diff+ '_' + latlon + '_diffs.png', dpi=300)
+    plt.tight_layout()
+    plt.savefig('output/plots/latlon/'+diff+ '_' + latlon + '_diffs.png', dpi=300)
     
     if show:
         plt.show()
-
 
 if __name__ == "__main__":
     pass
