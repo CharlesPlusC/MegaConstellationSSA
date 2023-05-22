@@ -69,6 +69,9 @@ The state vectors for each spacecraft orbit are continuously updated with new TL
 - The NORAD IDs of the satellites selected for this study are provided in external/selected_satellites.json
 - The TLE_analysis files are around ~1GB in size so I have not added these to the repo. You will have to run the NORAD_vs_SUP_TLE_analysis() function to generate these. This will only take a couple of minutes typically.
 
+__SupTLE vs GP vs Operator Ephemeris:__
+The 3-way benchmarking analysis that was performed on the Supplemental, NORAD and Operator ephemerides uses the ephemerides that are stored in the _"external/ephem_TLE_compare"_ folder. Each sub-folder here belongs to one spacecraft (NORAD ID). 
+
 ## Outputs:
 The following repo will enable you to replicate all figures in the paper and a number of others that were not included for brevity.
 

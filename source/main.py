@@ -47,7 +47,7 @@ def main ():
     # plot_fft_comparison(all_dfs, show=True)
 
     # Histogram of the difference between the NORAD and SUP TLEs
-    # plot_diff_hist(all_dfs, show=True)
+    plot_diff_hist(all_dfs, show=False)
 
     # Error as a function of geographic location (lat/lon)
     # plot_launch_latlon_diffs(all_dfs, show=False, criteria=1) #errors within 1 SD from the mean 
@@ -57,7 +57,7 @@ def main ():
     # plot_ground_tracks(all_dfs, show=True)
 
     # Plot the difference between the NORAD and SUP TLEs projected onto the ground track
-    plot_map_diffs_smallvals_all(all_dfs, show=False, criteria=1) #errors within 1 SD from the mean
+    # plot_map_diffs_smallvals_all(all_dfs, show=False, criteria=1) #errors within 1 SD from the mean
 
 if __name__ == "__main__":
     main()

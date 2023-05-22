@@ -349,27 +349,39 @@ def plot_diff_hist(sats_dataframe_list: List[pd.DataFrame],
     else:
         diff_types = subplot_info.keys()
 
+    legend_handles = []
+    legend_labels = []
+
     for diff in diff_types:
         ax, xlabel, ylabel, xlims = subplot_info[diff]
         data_dict = {df['constellation'].iloc[0]: df[diff] for df in sats_dataframe_list}
 
-        text_y_offset = 0.15
-        text_y = 0.95
+        text_x_offset = 0.65  # Adjust the offset to move the text to the bottom right
+        text_x = 0.95  # Start the text from the right edge
+        text_y = 0.95  # Start the text from the top edge
+        text_y_offset = 0.2  # Adjust the offset to spread the text in the y-direction
 
         for constellation, data in data_dict.items():
             # Generate histogram with automatic bins
-            n, bins, patches = ax.hist(data, bins='auto', alpha=0.5, label=constellation, range=xlims, color=constellation_colour_dict[constellation.lower()])
+            n, bins, patches = ax.hist(data, bins='auto', alpha=0.5, label=constellation,
+                                        range=xlims, color=constellation_colour_dict[constellation.lower()])
 
             # Calculate statistics
             mean, std = np.mean(data), np.std(data)
 
             # Add statistics to the plot as text
             stats_text = "\n".join([
-                f'Mean {constellation}: {mean:.2f}km',
-                f'Std {constellation}: {std:.2f}km'
+                f'μ {constellation}: {mean:.2f}km',
+                f'σ {constellation}: {std:.2f}km'
             ])
-            ax.text(0.05, text_y, stats_text, transform=ax.transAxes, verticalalignment='top', fontsize=10)
+            ax.text(text_x, text_y, stats_text, transform=ax.transAxes, horizontalalignment='right',
+                    verticalalignment='top', fontsize=8)
             text_y -= text_y_offset
+
+            if constellation not in legend_labels:
+                # Add only one legend entry per unique constellation
+                legend_handles.append(patches[0])  # Add the first patch from each histogram
+                legend_labels.append(constellation)
 
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
@@ -378,12 +390,16 @@ def plot_diff_hist(sats_dataframe_list: List[pd.DataFrame],
         ax.set_yscale('log')
         ax.set_ylim(bottom=1)  # set y lower limit to 1
         ax.set_xlim(xlims)  # set x limits
-        ax.legend()
 
-    plt.tight_layout()
-    plt.savefig('output/plots/histograms/'+diff+'_hist.png', dpi=300)
+    # Add a single legend with one entry per constellation
+    fig.legend(legend_handles, legend_labels, loc='center right')
+
+    plt.tight_layout(rect=(0, 0, 0.85, 1))  # Adjust the rect parameter to allocate space for the legend
+
+    plt.savefig('output/plots/histograms/all_diffs_hist.png', dpi=300)  # Save with a single filename for all differences
     if show:
         plt.show()
+
 
 def plot_launch_latlon_diffs(sats_dataframe_list: List[pd.DataFrame] = [], show=False, criteria=1):
     """
