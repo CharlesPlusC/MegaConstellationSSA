@@ -277,5 +277,48 @@ def plot_diff_hist(sats_dataframe_list, diffs='all', show=False):
     if show:
         plt.show()
 
+def plot_launch_latlon_diffs(sats_dataframe_list: List[pd.DataFrame] = [], show=False, criteria=1):
+
+    latslons = ['lats', 'lons']
+
+    # Create a figure with as many subplots as there are unique launches
+    launches = ['L' + str(df['launch_no'][0]) for df in sats_dataframe_list]
+    unique_launches = set(launches)
+    fig, axs = plt.subplots(1, len(unique_launches), figsize=(5*len(unique_launches), 5))
+
+    # Create a dictionary mapping each unique launch to an axis
+    launch_to_axis = {launch: axis for launch, axis in zip(unique_launches, axs)}
+
+    for latlon in latslons:
+        for diff in diff_types:
+            for df in sats_dataframe_list:
+                # Apply criteria
+                mean = np.mean(df[diff])
+                std = np.std(df[diff])
+                df_filtered = df[(df[diff] > mean - criteria*std) & (df[diff] < mean + criteria*std)]
+                
+                # Assign a color based on the launch
+                launch = 'L' + str(df['launch_no'][0])
+                color = launch_colour_dict[launch]
+                
+                # Create subplot title
+                title = f"{df['constellation'][0]} {launch}"
+
+                # Get the correct axis for this launch
+                axis = launch_to_axis[launch]
+
+                # Plot the data
+                axis.scatter(df_filtered[latlon], df_filtered[diff], alpha=0.3, s=0.8, color=color)
+                axis.set_title(title)
+                axis.set_xlabel(f'{latlon.capitalize()} (Degrees)')
+                axis.grid(True)
+
+                plt.tight_layout()
+        plt.savefig('output/plots/latlon_diffs/'+diff+ '_' + latlon + '_diffs.png', dpi=300)
+    
+    if show:
+        plt.show()
+
+
 if __name__ == "__main__":
     pass

@@ -2,7 +2,7 @@ import os
 import sys
 from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis, TLE_analysis_to_df, launch_specific_stats
 from tools.tletools import load_satellite_lists
-from tools.plotting_tools import plot_altitude_timeseries, plot_fft_comparison, plot_diff_subplots, plot_diff_hist
+from tools.plotting_tools import plot_altitude_timeseries, plot_fft_comparison, plot_diff_subplots, plot_diff_hist, plot_launch_latlon_diffs
 import cProfile
 import numpy as np
 
@@ -46,7 +46,11 @@ def main ():
     # plot the FFTs for the selected list of dataframes
     # plot_fft_comparison(all_dfs, show=True)
 
-    plot_diff_hist(all_dfs, show=True)
+    # Histogram of the difference between the NORAD and SUP TLEs
+    # plot_diff_hist(all_dfs, show=True)
+
+    # Error as a function of geographic location (lat/lon)
+    plot_launch_latlon_diffs(all_dfs, show=True)
 
 if __name__ == "__main__":
     main()
