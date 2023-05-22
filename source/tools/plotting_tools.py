@@ -18,6 +18,7 @@ mpl.rcParams['font.size'] = 11
 
 # Dictionary of colours for the different launches to be consistent across plots
 launch_colour_dict = {'L4': 'xkcd:blue', 'L28': 'xkcd:dark red', 'L5': 'xkcd:azure', 'L36': 'xkcd:orange', 'L6': 'xkcd:light blue', 'L30': 'xkcd:coral'}
+constellation_colour_dict = {'oneweb': 'xkcd:azure', 'starlink': 'xkcd:coral'}
 # list of the different types of differences to be plotted
 diff_types = ['h_diffs', 'c_diffs', 'l_diffs', 'cart_pos_diffs'] 
               
@@ -223,3 +224,58 @@ def plot_diff_subplots(sats_dataframe, diffs='all', show=False):
             plt.savefig('output/plots/timseries_subplots/'+diff_type+'_subplots_'+constellation+'.png', dpi=300)
             if show:
                 plt.show()
+
+def plot_diff_hist(sats_dataframe_list, diffs='all', show=False):
+    fig, axs = plt.subplots(2, 2, figsize=(8, 5))
+
+    # Define info for each subplot
+    subplot_info = {
+        'h_diffs': (axs[0, 0], r'$\Delta$ H (Km)', 'Count', [-1, 1]),
+        'c_diffs': (axs[0, 1], r'$\Delta$ C (Km)', 'Count', [-1, 1]),
+        'l_diffs': (axs[1, 0], r'$\Delta$ L (Km)', 'Count', [-20, 20]),
+        'cart_pos_diffs': (axs[1, 1], r'$\Delta$ 3D (Km)', 'Count', [0, 25])
+    }
+
+    if diffs != 'all':
+        diff_types = diffs
+    else:
+        diff_types = subplot_info.keys()
+
+    for diff in diff_types:
+        ax, xlabel, ylabel, xlims = subplot_info[diff]
+        data_dict = {df['constellation'].iloc[0]: df[diff] for df in sats_dataframe_list}
+
+        text_y_offset = 0.15
+        text_y = 0.95
+
+        for constellation, data in data_dict.items():
+            # Generate histogram with automatic bins
+            n, bins, patches = ax.hist(data, bins='auto', alpha=0.5, label=constellation, range=xlims, color=constellation_colour_dict[constellation.lower()])
+
+            # Calculate statistics
+            mean, std = np.mean(data), np.std(data)
+
+            # Add statistics to the plot as text
+            stats_text = "\n".join([
+                f'Mean {constellation}: {mean:.2f}km',
+                f'Std {constellation}: {std:.2f}km'
+            ])
+            ax.text(0.05, text_y, stats_text, transform=ax.transAxes, verticalalignment='top', fontsize=10)
+            text_y -= text_y_offset
+
+        ax.set_xlabel(xlabel)
+        ax.set_ylabel(ylabel)
+        ax.tick_params(axis='x', rotation=45)
+        ax.grid(True, which='major')
+        ax.set_yscale('log')
+        ax.set_ylim(bottom=1)  # set y lower limit to 1
+        ax.set_xlim(xlims)  # set x limits
+        ax.legend()
+
+    plt.tight_layout()
+    plt.savefig('output/plots/histograms/'+diff+'_hist.png', dpi=300)
+    if show:
+        plt.show()
+
+if __name__ == "__main__":
+    pass
