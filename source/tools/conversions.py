@@ -280,3 +280,42 @@ def eci2latlon(eci_positions: List[List[float]], eci_velocities: List[List[float
     lons = lla_coords[1]
 
     return lats, lons
+
+def doy_to_dom_month(year, doy):
+    d = datetime.datetime(year, 1, 1) + datetime.timedelta(doy - 1)
+    day_of_month = d.day
+    month = d.month
+    return day_of_month, month
+
+def parse_spacex_datetime_stamps(timestamps):
+    """Parse SpaceX ephemeris datetime stamps into year, day of year, hour, minute, second."""
+    
+    # make an array where we will store the year, day of year, hour, minute, and second for each timestamp
+    parsed_tstamps = np.zeros((len(timestamps), 7))
+    
+    for i in range(0, len(timestamps), 1):
+        tstamp_str = str(timestamps[i])
+        # year is first 4 digits
+        year = tstamp_str[0:4]
+        # day of year is next 3 digits
+        dayofyear = tstamp_str[4:7]
+        #convert day of year to day of month and month number
+        day_of_month, month = doy_to_dom_month(int(year), int(dayofyear))
+        # hour is next 2 digits
+        hour = tstamp_str[7:9]
+        # minute is next 2 digits
+        minute = tstamp_str[9:11]
+        # second is next 2 digits
+        second = tstamp_str[11:13]
+        # milisecond is next 3 digits
+        milisecond = tstamp_str[14:16]
+        # add the parsed timestamp to the array
+        parsed_tstamps[i] = ([int(year), int(month), int(day_of_month), int(hour), int(minute), int(second), int(milisecond)])
+
+    return parsed_tstamps
+
+def yyyy_mm_dd_hh_mm_ss_to_jd(year, month, day, hour, minute, second, milisecond):
+    """Convert year, month, day, hour, minute, second to datetime object and then to julian date."""
+    dt_obj = datetime(year, month, day, hour, minute, second, milisecond*1000)
+    jd = Time(dt_obj).jd
+    return jd

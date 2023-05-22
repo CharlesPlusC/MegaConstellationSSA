@@ -36,7 +36,6 @@ def master_sgp4_ephemeris(start_date, stop_date, master_TLE, update = True, dt =
     jd_start = utc_jd_date(start_date[2], start_date[1], start_date[0], 0, 0, 0) #midnight on the start day
     jd_stop = utc_jd_date(stop_date[2], stop_date[1], stop_date[0], 0, 0, 0) #midnight on the stop day
 
-
     # Check the date of the first and last TLEs in each list
     # If the dates are outside the range of the start and stop dates set the start and stop dates to the first and last TLE dates
 
@@ -487,95 +486,100 @@ def compute_fft(df: pd.DataFrame, diff_type: str) -> Tuple[np.ndarray, np.ndarra
 
     return fftfreqs[im], 10 * np.log10(diff_psd[im])
 
-# def find_files_sup_gp_op(folder_path = 'data/ephem_TLE_compare'):
-#     sup_list = []
-#     gp_list = []
-#     ephem_list = []
-#     folder_path = 'data/ephem_TLE_compare'
-#     # each folder is specific to a launch
-#     for sc_folder in os.listdir(folder_path):
-#         # go throgh each file in the launch folder
-#         for file in os.listdir(folder_path + '/' + sc_folder):
-#             # if the file starts with 'sup' then it is a suplimental TLE
-#             if file.startswith('sup'):
-#                 sup_list.append(folder_path + '/' + sc_folder + '/' + file)
-#             # if the file starts with 'gp' then it is a gp TLE
-#             elif file.startswith('gp'):
-#                 gp_list.append(folder_path + '/' + sc_folder + '/' + file)
-#             # if the file starts with 'MEME' then it is a ephemeris
-#             elif file.startswith('MEME'):
-#                 ephem_list.append(folder_path + '/' + sc_folder + '/' + file)
-#     # check that the lists are the same length else throw an error
-#     try:
-#         assert len(sup_list) == len(gp_list) == len(ephem_list)
-#     except AssertionError:
-#         print('sup_list, gp_list, and ephem_list are not the same length')
-#         return
+def find_files_sup_gp_op(folder_path = 'external/ephem_TLE_compare'):
+    sup_list = []
+    gp_list = []
+    ephem_list = []
+    # each folder is specific to a launch
+    for sc_folder in os.listdir(folder_path):
+        # go throgh each file in the launch folder
+        for file in os.listdir(folder_path + '/' + sc_folder):
+            # if the file starts with 'sup' then it is a suplimental TLE
+            if file.startswith('sup'):
+                sup_list.append(folder_path + '/' + sc_folder + '/' + file)
+            # if the file starts with 'gp' then it is a gp TLE
+            elif file.startswith('gp'):
+                gp_list.append(folder_path + '/' + sc_folder + '/' + file)
+            # if the file starts with 'MEME' then it is a ephemeris
+            elif file.startswith('MEME'):
+                ephem_list.append(folder_path + '/' + sc_folder + '/' + file)
+    # check that the lists are the same length else throw an error
+    try:
+        assert len(sup_list) == len(gp_list) == len(ephem_list)
+    except AssertionError:
+        print('sup_list, gp_list, and ephem_list are not the same length')
+        return
     
-#     return sup_list, gp_list, ephem_list
+    return sup_list, gp_list, ephem_list
 
-# def sup_gp_op_benchmark():
-#     sup_list, gp_list, ephem_list = find_files_sup_gp_op()
+def sup_gp_op_benchmark():
+    sup_list, gp_list, ephem_list = find_files_sup_gp_op()
         
 #     # now going through each spacecraft
-#     all_triple_ephems = [] # list of the combined ephemeris data for each spacecraft
-#     all_sup_ages = [] # list of the ages of the suplemental TLEs
-#     all_gp_ages = [] # list of the ages of the gp TLEs
-#     all_sup_tle_epochs = [] # list of the epochs of the suplemental TLEs
-#     all_gp_tle_epochs = [] # list of the epochs of the gp TLEs
-#     for i in range(len(sup_list)):
-#         #read the first 5 lines of the ephem file
-#         sup_path = sup_list[i]
-#         gp_path = gp_list[i]
-#         ephem_path = ephem_list[i]
+    all_triple_ephems = [] # list of the combined ephemeris data for each spacecraft
+    all_sup_ages = [] # list of the ages of the suplemental TLEs
+    all_gp_ages = [] # list of the ages of the gp TLEs
+    all_sup_tle_epochs = [] # list of the epochs of the suplemental TLEs
+    all_gp_tle_epochs = [] # list of the epochs of the gp TLEs
+    for i in range(len(sup_list)):
+        #read the first 5 lines of the ephem file
+        sup_path = sup_list[i]
+        gp_path = gp_list[i]
+        ephem_path = ephem_list[i]
 
-#         # read the first 5 lines of the ephem file
-#         with open(ephem_path) as f:
-#             ephem_lines = f.readlines()
-#         ephem_lines = ephem_lines[:5]
-#         ephem_utc_start = str(ephem_lines[1][16:16+19]) # start time
-#         ephem_utc_end = str(ephem_lines[1][55:55+19]) # end time
-#         ephem_step_size = int(ephem_lines[1][89:89+2]) # step size
-#         #convert to datetime object
-#         ephem_utc_dt_obj_start = datetime.strptime(ephem_utc_start, '%Y-%m-%d %H:%M:%S')
-#         ephem_utc_dt_obj_end = datetime.strptime(ephem_utc_end, '%Y-%m-%d %H:%M:%S')
-#         # convert to julian date
-#         ephem_start_jd_dt_obj = Time(ephem_utc_dt_obj_start).jd
-#         ephem_end_jd_dt_obj = Time(ephem_utc_dt_obj_end).jd
+        # read the first 5 lines of the operator ephem file
+        with open(ephem_path) as f:
+            ephem_lines = f.readlines()
+        ephem_lines = ephem_lines[:5]
+        ephem_utc_start = str(ephem_lines[1][16:16+19]) # start time
+        ephem_utc_end = str(ephem_lines[1][55:55+19]) # end time
+        ephem_step_size = int(ephem_lines[1][89:89+2]) # step size
+        #convert to datetime object
+        ephem_utc_dt_obj_start = datetime.datetime.strptime(ephem_utc_start, '%Y-%m-%d %H:%M:%S')
+        ephem_utc_dt_obj_end = datetime.datetime.strptime(ephem_utc_end, '%Y-%m-%d %H:%M:%S')
+        # convert to julian date
+        ephem_start_jd_dt_obj = Time(ephem_utc_dt_obj_start).jd
+        ephem_end_jd_dt_obj = Time(ephem_utc_dt_obj_end).jd
 
-#         gp_TLE_list = read_TLEs(gp_path)
-#         sup_TLE_list = read_TLEs(sup_path)
+        gp_TLE_list = read_TLEs(gp_path)
+        sup_TLE_list = read_TLEs(sup_path)
 
-#         sup_tle_epochs = [TLE_time(TLE) for TLE in sup_TLE_list]
-#         all_sup_tle_epochs.append(sup_tle_epochs)
-#         gp_tle_epochs = [TLE_time(TLE) for TLE in gp_TLE_list]
-#         all_gp_tle_epochs.append(gp_tle_epochs)
+        sup_tle_epochs = [TLE_time(TLE) for TLE in sup_TLE_list]
+        all_sup_tle_epochs.append(sup_tle_epochs)
+        gp_tle_epochs = [TLE_time(TLE) for TLE in gp_TLE_list]
+        all_gp_tle_epochs.append(gp_tle_epochs)
 
-#         # compare the start time of the three data sources
-#         gp_start = TLE_time(gp_TLE_list[0])
-#         sup_start = TLE_time(sup_TLE_list[0])
-#         # if any of the TLE (sup or gp) start times are after the ephemeris start time, then return an error and end the loop
-#         if gp_start > ephem_start_jd_dt_obj or sup_start > ephem_start_jd_dt_obj:
-#             print('The start time of the TLE is after the start time of the ephemeris. Please provide a TLE that starts before the ephemeris start time.')
-#             break
-#             # this is because i cannot interpolate the ephemeris, but i can interpolate the TLEs
-#             # so I interpolate the TLEs to the ephemeris start time
-#         # extract the start time of the ephemeris and set it as the start time (compare_start) for the combine_TLE2eph function
-#         else:
-#             compare_start = ephem_start_jd_dt_obj
-#         # now compare the end date of all data sources (ephemeris, sup, gp)
-#         gp_end = TLE_time(gp_TLE_list[-1])
-#         sup_end = TLE_time(sup_TLE_list[-1])
-#             # find the earliest end date and assign it to a variable called compare_end
-#         compare_end = min(ephem_end_jd_dt_obj, gp_end, sup_end)
-#             # set this as the end time for the combine_TLE2eph function
-#         # now go through the ephemeris and find the step size. Use this to set the dt variable for the combine_TLE2eph function
-#         # now make ephemerides using the GP and SUP TLEs
-#         sup_eph, sup_ages = TLE_ephemeris(sup_TLE_list, ephem_start_jd_dt_obj, ephem_end_jd_dt_obj, ephem_step_size)
-#         gp_eph, gp_ages = TLE_ephemeris(gp_TLE_list,ephem_start_jd_dt_obj, ephem_end_jd_dt_obj, ephem_step_size)
-#         # save the ages of the TLEs
-#         all_sup_ages.append(sup_ages)
-#         all_gp_ages.append(gp_ages)
+        # compare the start time of the three data sources
+        gp_start = TLE_time(gp_TLE_list[0])
+        sup_start = TLE_time(sup_TLE_list[0])
+        # if any of the TLE (sup or gp) start times are after the ephemeris start time, then return an error and end the loop
+        if gp_start > ephem_start_jd_dt_obj or sup_start > ephem_start_jd_dt_obj:
+            print('The start time of the TLE is after the start time of the ephemeris. Please provide a TLE that starts before the ephemeris start time.')
+            break
+            # this is because i cannot interpolate the ephemeris, but i can interpolate the TLEs
+            # so I interpolate the TLEs to the ephemeris start time
+        # extract the start time of the ephemeris and set it as the start time (compare_start) for the combine_TLE2eph function
+        else:
+            compare_start = ephem_start_jd_dt_obj
+        # now compare the end date of all data sources (ephemeris, sup, gp)
+        gp_end = TLE_time(gp_TLE_list[-1])
+        sup_end = TLE_time(sup_TLE_list[-1])
+            # find the earliest end date and assign it to a variable called compare_end
+        compare_end = min(ephem_end_jd_dt_obj, gp_end, sup_end)
+            # set this as the end time for the combine_TLE2eph function
+        # now go through the ephemeris and find the step size. Use this to set the dt variable for the combine_TLE2eph function
+        # now make ephemerides using the GP and SUP TLEs
+
+        print("start:", ephem_start_jd_dt_obj)
+        print("end:", ephem_end_jd_dt_obj)
+
+        sup_eph, sup_ages = combine_TLE2eph(TLE_list=gp_TLE_list, jd_start=ephem_start_jd_dt_obj, jd_stop=ephem_end_jd_dt_obj, dt=ephem_step_size)
+        gp_eph, gp_ages = combine_TLE2eph(TLE_list=gp_TLE_list, jd_start=ephem_start_jd_dt_obj, jd_stop=ephem_end_jd_dt_obj, dt=ephem_step_size)
+        # save the ages of the TLEs
+        all_sup_ages.append(sup_ages)
+        all_gp_ages.append(gp_ages)
+        print('sup_ages', sup_ages)
+        print('gp_ages', gp_ages)
 
 #         # now make dataframe with a row for each time step and a columns for jd, x, y, z, u,v,w
 #         sup_df = pd.DataFrame(columns = ['sup_jd', 'sup_x', 'sup_y', 'sup_z', 'sup_u', 'sup_v', 'sup_w'])

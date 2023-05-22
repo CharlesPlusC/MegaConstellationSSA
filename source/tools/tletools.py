@@ -440,6 +440,8 @@ def combine_TLE2eph(TLE_list, jd_start, jd_stop, dt=(15 * 60)):
     current_tle_idx = 0
 
     while current_jd < jd_stop:
+        found_tle = False  # Flag to track if a matching TLE is found
+
         for i in range(current_tle_idx, len(TLE_list)):
             TLE_jd = TLE_time(TLE_list[i])
             next_TLE_jd = TLE_time(TLE_list[i + 1]) if i < len(TLE_list) - 1 else TLE_time(TLE_list[0])
@@ -451,9 +453,14 @@ def combine_TLE2eph(TLE_list, jd_start, jd_stop, dt=(15 * 60)):
                 hours_orbit_age = (current_jd - TLE_jd) * 24
                 orbit_ages.append(hours_orbit_age)
                 current_tle_idx = i  # Update the TLE index
+                found_tle = True
                 break
+
+        if not found_tle:
+            break  # Break out of the outer loop if no matching TLE is found
 
     ephemeris = ephemeris[:n_steps]
     orbit_ages = orbit_ages[:n_steps]
 
     return ephemeris, orbit_ages
+
