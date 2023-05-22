@@ -91,7 +91,12 @@ __Constellation Ground Tracks__
 <img src="output/plots/ground_tracks/g_tracks.png">
 
 __Relation between error and Geographical Location__
+
 <img src="output/plots/ground_tracks/diffs_gtrax/OneWeb_l_diffs.png">
+
+__Error Dimension Histogram__
+
+<img src="output/plots/histograms/all_diffs_hist.png">
 
 __Launch statistics__
 Summary statistics of the analysis are generated and can be found in the _"output/launch_specific/launch_summary_stats.csv"_ folder.
