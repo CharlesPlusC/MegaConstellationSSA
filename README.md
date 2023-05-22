@@ -34,7 +34,7 @@ Our time-series analysis of TLE data for Starlink and OneWeb mega-constellations
 
 ## Collaboration statement:
 
-We welcome developers, researchers, and SSA practitioners to explore this repository, review our approach, and contribute to this essential field. Feel free to raise issues, suggest improvements, or submit pull requests. Let's collaborate to ensure the safe and sustainable utilization of our shared space environment. Your expertise and contributions are not only valued but vital in bridging the gap between the required and actual positional data accuracy in SSA systems.
+We welcome developers, researchers, and SSA practitioners to explore this repository, review our approach, and contribute to this essential field. Feel free to raise issues, suggest improvements, or submit pull requests.
 
 ## Instructions for use
 1. Clone the repository
