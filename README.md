@@ -94,3 +94,12 @@ If you make changes to your environment and you wish to save these to the envion
 ``` bash
 conda env export > megaconst_env.yml
 ```
+
+## NOTES:
+if you get an error when install basemap on mac-m1, try:
+``` bash
+pip install --upgrade setuptools wheel pip
+conda install -c conda-forge cartopy
+conda install -c conda-forge geos 
+conda install -c conda-forge basemap
+```
