@@ -8,7 +8,7 @@ from matplotlib.patches import Patch
 import matplotlib as mpl
 import json
 from scipy import signal
-from typing import Dict, List
+from typing import Dict, List, Union
 
 #local imports
 from .analysis_tools import compute_fft
@@ -27,13 +27,18 @@ json_filepath='external/selected_satellites.json'
 with open(json_filepath, 'r') as f:
     selected_satellites = json.load(f)
               
-def plot_altitude_timeseries(dfs, show=False):
-    """
-    Plots altitude time series for different satellites from given dataframes.
+def plot_altitude_timeseries(dfs: List[pd.DataFrame], show: bool = False) -> None:
+    """Plots altitude time series for different satellites from given dataframes.
 
-    Parameters:
-    dfs (list): A list of pandas DataFrames, each containing data for a different satellite.
-    json_filepath (str): The path to the JSON file containing the selected satellite numbers.
+    Args:
+        dfs (List[pd.DataFrame]): A list of pandas DataFrames, each containing data for a different satellite.
+        show (bool, optional): Whether to display the plot. Defaults to False.
+    
+    Returns:
+        None
+
+    Raises:
+        None
     """
 
     sat_nums = []
@@ -150,8 +155,24 @@ def plot_fft_comparison(list_of_dfs: List[pd.DataFrame], diff_types: List[str] =
             if show:
                 plt.show()
 
-def plot_diff_subplots(sats_dataframe, diffs='all', show=False):
-    # Divide dataframes by constellation
+def plot_diff_subplots(sats_dataframe: List[pd.DataFrame],
+                       diffs: Union[str, List[str]] = 'all',
+                       show: bool = True) -> None:
+    """Plot subplots of the specified differences for satellite data.
+
+    Args:
+        sats_dataframe (List[pd.DataFrame]): A list of pandas DataFrames containing satellite data.
+        diffs (Union[str, List[str]], optional): The differences to plot subplots for.
+            If 'all', plots subplots for all available differences. Defaults to 'all'.
+        show (bool, optional): Whether to display the plot. Defaults to True.
+    
+    Returns:
+        None
+
+    Raises:
+        Exception: If launch key is not found in launch_colour_dict.
+
+    """
     constellation_dict = {}
     for df in sats_dataframe:
         constellation = df['constellation'][0]
@@ -227,7 +248,24 @@ def plot_diff_subplots(sats_dataframe, diffs='all', show=False):
             if show:
                 plt.show()
 
-def plot_diff_hist(sats_dataframe_list, diffs='all', show=False):
+def plot_diff_hist(sats_dataframe_list: List[pd.DataFrame],
+                   diffs: Union[str, List[str]] = 'all',
+                   show: bool = False) -> None:
+    """Plot histograms of the specified differences for satellite data.
+
+    Args:
+        sats_dataframe_list (List[pd.DataFrame]): A list of pandas DataFrames containing satellite data.
+        diffs (Union[str, List[str]], optional): The differences to plot histograms for.
+            If 'all', plots histograms for all available differences. Defaults to 'all'.
+        show (bool, optional): Whether to display the plot. Defaults to False.
+    
+    Returns:
+        None
+
+    Raises:
+        None
+
+    """
     fig, axs = plt.subplots(2, 2, figsize=(8, 5))
 
     # Define info for each subplot
@@ -280,53 +318,50 @@ def plot_diff_hist(sats_dataframe_list, diffs='all', show=False):
         plt.show()
 
 def plot_launch_latlon_diffs(sats_dataframe_list: List[pd.DataFrame] = [], show=False, criteria=1):
-    
+    #NOTE: this is specific to a 2*3 subplot layout
+    #TODO: make this more general
+
     latslons = ['lats', 'lons']
 
-    # Determine the unique constellations and launches from the JSON data
-    constellations = list(selected_satellites.keys())
-    launches = list(set([launch for const in constellations for launch in selected_satellites[const].keys()]))
+    # Create a figure with as many subplots as there are unique launches
+    launches = ['L' + str(df['launch_no'][0]) for df in sats_dataframe_list]
+    unique_launches = sorted(set(launches)) # sorted to ensure consistent mapping
+    constellations = sorted(set(df['constellation'][0] for df in sats_dataframe_list)) # getting unique constellations
+    fig, axs = plt.subplots(2, len(unique_launches) // 2, figsize=(5 * len(unique_launches) // 2, 5 * 2))
 
-    # Create a subplots grid
-    fig, axs = plt.subplots(len(constellations), len(launches), figsize=(5*len(launches), 5*len(constellations)))
-    
-    # One row per constellation
-    no_rows = len(constellations)
-    # number of cols is the maximum number of launches in a constellation
-    no_cols = max([len(selected_satellites[const].keys()) for const in constellations])
-    
-    # keep the extra plots blank if there are less launches for one of the constellation
+    # Create a dictionary mapping each unique launch to an axis
+    launch_to_axis = {launch: axs[i // 3, i % 3] for i, launch in enumerate(unique_launches)}
 
-    
     for latlon in latslons:
         for diff in diff_types:
             for df in sats_dataframe_list:
                 # Apply criteria
                 mean = np.mean(df[diff])
                 std = np.std(df[diff])
-                df_filtered = df[(df[diff] > mean - criteria*std) & (df[diff] < mean + criteria*std)]
-                
+                df_filtered = df[(df[diff] > mean - criteria*std) & (df[diff] < mean + criteria*std)] # remove error more than 1 SD from the mean
+
                 # Assign a color based on the launch
                 launch = 'L' + str(df['launch_no'][0])
-                constellation = df['constellation'][0]
                 color = launch_colour_dict[launch]
+
+                # Create subplot title
+                title = f"{df['constellation'][0]} {launch}"
+
+                # Get the correct axis for this launch
+                axis = launch_to_axis[launch]
+
+                # Plot the data
+                axis.scatter(df_filtered[latlon], df_filtered[diff], alpha=0.3, s=0.8, color=color)
+                axis.set_title(title)
+                axis.set_xlabel(f'{latlon.capitalize()} (Degrees)')
+                axis.grid(True)
                 
-                # Only plot the data if this constellation-launch combination exists in the JSON data
-                if launch in selected_satellites.get(constellation, {}):
-                    # Get the correct axis for this constellation and launch
-                    row = constellation_to_axis_row[constellation]
-                    col = launch_to_axis_col[launch]
-                    axis = axs[row, col]
+                # create title for the whole figure
+                fig.suptitle(f'{diff.capitalize()} for {latlon.capitalize()}\n {criteria} SD from the mean')
 
-                    # Plot the data
-                    axis.scatter(df_filtered[latlon], df_filtered[diff], alpha=0.3, s=0.8, color=color)
-                    axis.set_title(f"Δ {diff} vs {latlon.capitalize()}, {criteria}σ")
-                    axis.set_xlabel(f'{latlon.capitalize()} (Degrees)')
-                    axis.grid(True)
+                plt.tight_layout()
+            plt.savefig('output/plots/latlon/' + str(diff) + '_' + str(latlon) + '_diffs' + str(criteria) + '_sd' + '.png', dpi=300)
 
-    plt.tight_layout()
-    plt.savefig('output/plots/latlon/'+diff+ '_' + latlon + '_diffs.png', dpi=300)
-    
     if show:
         plt.show()
 

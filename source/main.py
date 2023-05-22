@@ -50,7 +50,9 @@ def main ():
     # plot_diff_hist(all_dfs, show=True)
 
     # Error as a function of geographic location (lat/lon)
-    plot_launch_latlon_diffs(all_dfs, show=True)
+    plot_launch_latlon_diffs(all_dfs, show=False, criteria=1) #errors within 1 SD from the mean 
+    plot_launch_latlon_diffs(all_dfs, show=False, criteria=2) #errors within 2 SD from the mean 
+
 
 if __name__ == "__main__":
     main()
