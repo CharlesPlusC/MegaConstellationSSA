@@ -2,7 +2,7 @@ import os
 import sys
 from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis, TLE_analysis_to_df, launch_specific_stats
 from tools.tletools import load_satellite_lists
-from tools.plotting_tools import plot_altitude_timeseries, plot_fft_comparison, plot_diff_subplots, plot_diff_hist, plot_launch_latlon_diffs
+from tools.plotting_tools import plot_altitude_timeseries, plot_fft_comparison, plot_diff_subplots, plot_diff_hist, plot_launch_latlon_diffs, plot_ground_tracks
 import cProfile
 import numpy as np
 
@@ -51,9 +51,9 @@ def main ():
 
     # Error as a function of geographic location (lat/lon)
     # plot_launch_latlon_diffs(all_dfs, show=False, criteria=1) #errors within 1 SD from the mean 
-    plot_launch_latlon_diffs(all_dfs, show=False, criteria=2) #errors within 2 SD from the mean 
+    # plot_launch_latlon_diffs(all_dfs, show=False, criteria=2) #errors within 2 SD from the mean 
 
-
+    plot_ground_tracks(all_dfs, show=True)
 if __name__ == "__main__":
     main()
     

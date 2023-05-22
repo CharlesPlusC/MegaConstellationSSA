@@ -5,6 +5,7 @@ import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.patches import Patch
+import matplotlib.patches as mpatches
 import matplotlib as mpl
 from mpl_toolkits.basemap import Basemap
 import json
@@ -368,48 +369,46 @@ def plot_launch_latlon_diffs(sats_dataframe_list: List[pd.DataFrame] = [], show=
 
 def plot_ground_tracks(list_of_dfs: List[pd.DataFrame] = [], show: bool = False):
 
-    fig = plt.figure(figsize=(8,3))
-    mpl.rcParams['font.size'] = 11.0
+    # Load selected satellites from JSON file
+    json_filepath = 'external/selected_satellites.json'
+    with open(json_filepath, 'r') as f:
+        selected_satellites = json.load(f)
+    
+    # Prepare the figure
+    fig = plt.figure(figsize=(8,5))
+    plt.rcParams['font.size'] = 11.0
     m = Basemap(projection='mill', llcrnrlat=-90, urcrnrlat=90, llcrnrlon=-180, urcrnrlon=180, resolution='c')
     m.drawcoastlines()
     m.drawcountries()
-    m.drawmapboundary(fill_color='xkcd:grey')
+    m.drawmapboundary(fill_color='xkcd:light grey')
 
-    for df in Starlink_dfs:
-        if df['launch'][0] == 28:
-            col = 'xkcd:dark red'
-        elif df['launch'][0] == 36:
-            col = 'xkcd:orange'
-        elif df['launch'][0] == 30:
-            col = 'xkcd:coral'
-        m.scatter(df['lon'], df['lat'], latlon=True, alpha=0.2, s=0.01, c = col)
-
-    for df in Oneweb_dfs:
-        if df['launch'][0] == 4:
-            col = 'xkcd:blue'
-        elif df['launch'][0] == 5:
-            col = 'xkcd:azure'
-        elif df['launch'][0] == 6:
-            col = 'xkcd:light blue'
-        m.scatter(df['lon'], df['lat'], latlon=True, alpha=0.2, s=0.01, c = col)
-
-    # add parallels and meridians
+    # Iterate over each dataframe in list_of_dfs and draw scatter plot for each satellite type
+    for df in list_of_dfs:
+        for satellite_type, launches in selected_satellites.items():
+            for launch, _ in launches.items():
+                if 'L' + str(df['launch_no'][0]) in selected_satellites[satellite_type]:
+                    col = launch_colour_dict[launch]
+                    m.scatter(df['lons'], df['lats'], latlon=True, alpha=0.1, s=0.01, c=col)
+    
+    # Add parallels and meridians
     m.drawparallels(np.arange(-90., 120., 30.), labels=[1,0,0,0], fontsize=10)
     m.drawmeridians(np.arange(-180., 181., 60.), labels=[0,0,0,1], fontsize=10)
 
-    # add legend for the colours
-    import matplotlib.patches as mpatches
-    red_patch = mpatches.Patch(color='xkcd:dark red', label='Starlink Launch 28')
-    orange_patch = mpatches.Patch(color='xkcd:orange', label='Starlink Launch 36')
-    coral_patch = mpatches.Patch(color='xkcd:coral', label='Starlink Launch 30')
-    blue_patch = mpatches.Patch(color='xkcd:blue', label='Oneweb Launch 4')
-    azure_patch = mpatches.Patch(color='xkcd:azure', label='Oneweb Launch 5')
-    light_blue_patch = mpatches.Patch(color='xkcd:light blue', label='Oneweb Launch 6')
-    # add the legend and put it to the right of the plot so the whole plot is visible
-    plt.legend(handles=[red_patch, orange_patch, coral_patch, blue_patch, azure_patch, light_blue_patch], loc='center left', bbox_to_anchor=(1, 0.5))
-    plt.savefig('/Users/charlesc/Documents/GitHub/Astrodynamics/images/TLE_analysis/HCL_time_series/per_launch_subplots/latlon.png', bbox_inches='tight', dpi=300)
+    # Add legend
+    patches = []
+    for satellite_type, launches in selected_satellites.items():
+        for launch in launches:
+            color = launch_colour_dict[launch]
+            patches.append(mpatches.Patch(color=color, label=satellite_type.capitalize() + ' - Launch ' + launch[1:]))
+    plt.legend(handles=patches, loc='center left', bbox_to_anchor=(1, 0.5))
 
-    plt.show()
+    plt.tight_layout()
+    # Save the figure
+    plt.savefig('output/plots/ground_tracks/g_tracks.png', bbox_inches='tight', dpi=300)
+    
+    # Show the plot if show is set to True
+    if show:
+        plt.show()
 
 if __name__ == "__main__":
     pass
