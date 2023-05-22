@@ -15,7 +15,7 @@ import scipy.fftpack
 
 #local imports
 from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph, load_satellite_lists
-from .conversions import jd_to_utc, utc_jd_date, midnight_jd_date, HCL_diff, dist_3d, alt_series, ecef_to_lla, eci2ecef_astropy, eci2latlon
+from .conversions import jd_to_utc, utc_jd_date, midnight_jd_date, HCL_diff, dist_3d, alt_series, ecef_to_lla, eci2ecef_astropy, eci2latlon, TEME_to_MEME, parse_spacex_datetime_stamps, yyyy_mm_dd_hh_mm_ss_to_jd
 
 rmse = lambda x: np.sqrt(np.mean(np.square(x)))
 
@@ -512,7 +512,7 @@ def find_files_sup_gp_op(folder_path = 'external/ephem_TLE_compare'):
     
     return sup_list, gp_list, ephem_list
 
-def sup_gp_op_benchmark():
+def sup_gp_op_triple_ephemeris():
     sup_list, gp_list, ephem_list = find_files_sup_gp_op()
         
 #     # now going through each spacecraft
@@ -556,7 +556,7 @@ def sup_gp_op_benchmark():
         if gp_start > ephem_start_jd_dt_obj or sup_start > ephem_start_jd_dt_obj:
             print('The start time of the TLE is after the start time of the ephemeris. Please provide a TLE that starts before the ephemeris start time.')
             break
-            # this is because i cannot interpolate the ephemeris, but i can interpolate the TLEs
+            # this is because i cannot interpolate (using a propagator) the ephemeris, but i can interpolate the TLEs
             # so I interpolate the TLEs to the ephemeris start time
         # extract the start time of the ephemeris and set it as the start time (compare_start) for the combine_TLE2eph function
         else:
@@ -570,107 +570,106 @@ def sup_gp_op_benchmark():
         # now go through the ephemeris and find the step size. Use this to set the dt variable for the combine_TLE2eph function
         # now make ephemerides using the GP and SUP TLEs
 
-        print("start:", ephem_start_jd_dt_obj)
-        print("end:", ephem_end_jd_dt_obj)
-
         sup_eph, sup_ages = combine_TLE2eph(TLE_list=gp_TLE_list, jd_start=ephem_start_jd_dt_obj, jd_stop=ephem_end_jd_dt_obj, dt=ephem_step_size)
         gp_eph, gp_ages = combine_TLE2eph(TLE_list=gp_TLE_list, jd_start=ephem_start_jd_dt_obj, jd_stop=ephem_end_jd_dt_obj, dt=ephem_step_size)
         # save the ages of the TLEs
         all_sup_ages.append(sup_ages)
         all_gp_ages.append(gp_ages)
-        print('sup_ages', sup_ages)
-        print('gp_ages', gp_ages)
 
-#         # now make dataframe with a row for each time step and a columns for jd, x, y, z, u,v,w
-#         sup_df = pd.DataFrame(columns = ['sup_jd', 'sup_x', 'sup_y', 'sup_z', 'sup_u', 'sup_v', 'sup_w'])
-#         gp_df = pd.DataFrame(columns = ['gp_jd', 'gp_x', 'gp_y', 'gp_z', 'gp_u', 'gp_v', 'gp_w'])
+        # now make dataframe with a row for each time step and a columns for jd, x, y, z, u,v,w
+        sup_df = pd.DataFrame(columns = ['sup_jd', 'sup_x', 'sup_y', 'sup_z', 'sup_u', 'sup_v', 'sup_w'])
+        gp_df = pd.DataFrame(columns = ['gp_jd', 'gp_x', 'gp_y', 'gp_z', 'gp_u', 'gp_v', 'gp_w'])
 
-#         # go through each row in sup_df and apply TEME_to_MEME to the x,y,z,u,v,w columns. Replace them inplace
-#         for i in range(len(sup_eph)):
-#             meme_x, meme_y, meme_z, meme_u, meme_v, meme_w = TEME_to_MEME(x = sup_eph[i][1][0], y = sup_eph[i][1][1], z = sup_eph[i][1][2], u = sup_eph[i][2][0], v = sup_eph[i][2][1], w = sup_eph[i][2][2], jd_time = sup_eph[i][0])
-#             sup_df.loc[i] = [sup_eph[i][0], meme_x, meme_y, meme_z, meme_u, meme_v, meme_w]
+        # go through each row in sup_df and apply TEME_to_MEME to the x,y,z,u,v,w columns. Replace them inplace
+        for i in range(len(sup_eph)):
+            meme_x, meme_y, meme_z, meme_u, meme_v, meme_w = TEME_to_MEME(x = sup_eph[i][1][0], y = sup_eph[i][1][1], z = sup_eph[i][1][2], u = sup_eph[i][2][0], v = sup_eph[i][2][1], w = sup_eph[i][2][2], jd_time = sup_eph[i][0])
+            sup_df.loc[i] = [sup_eph[i][0], meme_x, meme_y, meme_z, meme_u, meme_v, meme_w]
 
-#         for i in range(len(gp_eph)):
-#             meme_x, meme_y, meme_z, meme_u, meme_v, meme_w = TEME_to_MEME(x = gp_eph[i][1][0], y = gp_eph[i][1][1], z = gp_eph[i][1][2], u = gp_eph[i][2][0], v = gp_eph[i][2][1], w = gp_eph[i][2][2], jd_time = gp_eph[i][0])
-#             gp_df.loc[i] = [gp_eph[i][0], meme_x, meme_y, meme_z, meme_u, meme_v, meme_w]
+        for i in range(len(gp_eph)):
+            meme_x, meme_y, meme_z, meme_u, meme_v, meme_w = TEME_to_MEME(x = gp_eph[i][1][0], y = gp_eph[i][1][1], z = gp_eph[i][1][2], u = gp_eph[i][2][0], v = gp_eph[i][2][1], w = gp_eph[i][2][2], jd_time = gp_eph[i][0])
+            gp_df.loc[i] = [gp_eph[i][0], meme_x, meme_y, meme_z, meme_u, meme_v, meme_w]
 
-#         #merge the two dataframes
-#         sup_n_gp_df = pd.merge(sup_df, gp_df, left_on = 'sup_jd', right_on = 'gp_jd')
+        #merge the two dataframes
+        sup_n_gp_df = pd.merge(sup_df, gp_df, left_on = 'sup_jd', right_on = 'gp_jd')
+        print(sup_n_gp_df.head())
+        print("shape of sup_n_gp_df is: ", sup_n_gp_df.shape)
 
-#         # read in the text file 
-#         with open(ephem_path) as f:
-#             lines = f.readlines()
-#         # remove the header lines
-#         lines = lines[4:]
-#         # select every 4th line
-#         t_xyz_uvw = lines[::4]
-#         # from all the lines in t_xyz_uvw select the first float in each line and append that to a list
-#         t = [float(i.split()[0]) for i in t_xyz_uvw]
-#         x = [float(i.split()[1]) for i in t_xyz_uvw]
-#         y = [float(i.split()[2]) for i in t_xyz_uvw]
-#         z = [float(i.split()[3]) for i in t_xyz_uvw]
-#         u = [float(i.split()[4]) for i in t_xyz_uvw]
-#         v = [float(i.split()[5]) for i in t_xyz_uvw]
-#         w = [float(i.split()[6]) for i in t_xyz_uvw]
+        # read in the text file 
+        with open(ephem_path) as f:
+            lines = f.readlines()
+        # remove the header lines
+        lines = lines[4:]
+        # select every 4th line
+        t_xyz_uvw = lines[::4]
+        # from all the lines in t_xyz_uvw select the first float in each line and append that to a list
+        t = [float(i.split()[0]) for i in t_xyz_uvw]
+        x = [float(i.split()[1]) for i in t_xyz_uvw]
+        y = [float(i.split()[2]) for i in t_xyz_uvw]
+        z = [float(i.split()[3]) for i in t_xyz_uvw]
+        u = [float(i.split()[4]) for i in t_xyz_uvw]
+        v = [float(i.split()[5]) for i in t_xyz_uvw]
+        w = [float(i.split()[6]) for i in t_xyz_uvw]
         
-#         # make all the values in the list 't' into a numpy array
-#         tstamp_array = np.array(t)
-#         # parse the timestamps into year, day of year, hour, minute, and second
-#         parsed_tstamps = parse_spacex_datetime_stamps(tstamp_array)
-#         # convert the parsed timestamps into julian dates
-#         jd_stamps = np.zeros(len(parsed_tstamps))
-#         for i in range(0, len(parsed_tstamps), 1):
-#             jd_stamps[i] = yyyy_mm_dd_hh_mm_ss_to_jd(int(parsed_tstamps[i][0]), int(parsed_tstamps[i][1]), int(parsed_tstamps[i][2]), int(parsed_tstamps[i][3]), int(parsed_tstamps[i][4]), int(parsed_tstamps[i][5]), int(parsed_tstamps[i][6]))
+        # make all the values in the list 't' into a numpy array
+        tstamp_array = np.array(t)
+        # parse the timestamps into year, day of year, hour, minute, and second
+        parsed_tstamps = parse_spacex_datetime_stamps(tstamp_array)
+        # convert the parsed timestamps into julian dates
+        jd_stamps = np.zeros(len(parsed_tstamps))
+        for i in range(0, len(parsed_tstamps), 1):
+            jd_stamps[i] = yyyy_mm_dd_hh_mm_ss_to_jd(int(parsed_tstamps[i][0]), int(parsed_tstamps[i][1]), int(parsed_tstamps[i][2]), int(parsed_tstamps[i][3]), int(parsed_tstamps[i][4]), int(parsed_tstamps[i][5]), int(parsed_tstamps[i][6]))
 
-#         # take t, x, y, z, u, v, w and put them into a dataframe
-#         spacex_ephem_df = pd.DataFrame({'jd_time':jd_stamps, 'x':x, 'y':y, 'z':z, 'u':u, 'v':v, 'w':w})
-#         # use the function meme_2_teme() to convert the x, y, z, u, v, w values from the MEME frame to the TEME frame
-#         # remove the last row from spacex_ephem_df
-#         spacex_ephem_df = spacex_ephem_df[:-1]
+        # take t, x, y, z, u, v, w and put them into a dataframe
+        spacex_ephem_df = pd.DataFrame({'jd_time':jd_stamps, 'x':x, 'y':y, 'z':z, 'u':u, 'v':v, 'w':w})
+        # use the function meme_2_teme() to convert the x, y, z, u, v, w values from the MEME frame to the TEME frame
+        # remove the last row from spacex_ephem_df
+        spacex_ephem_df = spacex_ephem_df[:-1]
 
-#         # merge the two dataframes (on index since the time stamps are off by around 8 seconds after 24 hours)
-#         triple_ephem_df = pd.merge(sup_n_gp_df, spacex_ephem_df, left_index = True, right_index = True)
+        # merge the two dataframes (on index since the time stamps are off by around 8 seconds after 24 hours)
+        triple_ephem_df = pd.merge(sup_n_gp_df, spacex_ephem_df, left_index = True, right_index = True)
 
-#         # now calculate the H, C, L, 3D diffs for each time step between the SUP/GP and SpaceX ephemerides
-#         prefs = ['gp_', 'sup_']
-#         for pref in prefs:
-#             H_diffs = []
-#             C_diffs = []
-#             L_diffs = []
-#             cart_pos_diffs = []
-#             for i in range(len(triple_ephem_df)):
-#                 tle_r = np.array([triple_ephem_df[pref + 'x'][i], triple_ephem_df[pref + 'y'][i], triple_ephem_df[pref + 'z'][i]])
-#                 ephem_r = np.array([triple_ephem_df['x'][i], triple_ephem_df['y'][i], triple_ephem_df['z'][i]])
+        # now calculate the H, C, L, 3D diffs for each time step between the SUP/GP and SpaceX ephemerides
+        prefs = ['gp_', 'sup_']
+        for pref in prefs:
+            H_diffs = []
+            C_diffs = []
+            L_diffs = []
+            cart_pos_diffs = []
+            for i in range(len(triple_ephem_df)):
+                tle_r = np.array([triple_ephem_df[pref + 'x'][i], triple_ephem_df[pref + 'y'][i], triple_ephem_df[pref + 'z'][i]])
+                ephem_r = np.array([triple_ephem_df['x'][i], triple_ephem_df['y'][i], triple_ephem_df['z'][i]])
 
-#                 tle_v = np.array([triple_ephem_df[pref + 'u'][i], triple_ephem_df[pref + 'v'][i], triple_ephem_df[pref + 'w'][i]])
-#                 ephem_v = np.array([triple_ephem_df['u'][i], triple_ephem_df['v'][i], triple_ephem_df['w'][i]])
+                tle_v = np.array([triple_ephem_df[pref + 'u'][i], triple_ephem_df[pref + 'v'][i], triple_ephem_df[pref + 'w'][i]])
+                ephem_v = np.array([triple_ephem_df['u'][i], triple_ephem_df['v'][i], triple_ephem_df['w'][i]])
 
-#                 unit_radial = ephem_r/np.linalg.norm(ephem_r)
-#                 unit_cross_track = np.array(np.cross(ephem_r, ephem_v)/np.linalg.norm(np.cross(ephem_r, ephem_v)))
-#                 unit_along_track = np.cross(unit_radial, unit_cross_track)
+                unit_radial = ephem_r/np.linalg.norm(ephem_r)
+                unit_cross_track = np.array(np.cross(ephem_r, ephem_v)/np.linalg.norm(np.cross(ephem_r, ephem_v)))
+                unit_along_track = np.cross(unit_radial, unit_cross_track)
 
-#                 unit_vectors = np.array([unit_radial, unit_cross_track, unit_along_track])
+                unit_vectors = np.array([unit_radial, unit_cross_track, unit_along_track])
 
-#                 r_diff = tle_r - ephem_r
+                r_diff = tle_r - ephem_r
 
-#                 r_diff_HCL = np.matmul(unit_vectors, r_diff)
+                r_diff_HCL = np.matmul(unit_vectors, r_diff)
 
-#                 h_diff = r_diff_HCL[0]
-#                 c_diff = r_diff_HCL[1]
-#                 l_diff = r_diff_HCL[2]
+                h_diff = r_diff_HCL[0]
+                c_diff = r_diff_HCL[1]
+                l_diff = r_diff_HCL[2]
 
-#                 cart_pos_diff = np.linalg.norm(tle_r - ephem_r)
+                cart_pos_diff = np.linalg.norm(tle_r - ephem_r)
 
-#                 H_diffs.append(h_diff)
-#                 C_diffs.append(c_diff)
-#                 L_diffs.append(l_diff)
-#                 cart_pos_diffs.append(cart_pos_diff)
+                H_diffs.append(h_diff)
+                C_diffs.append(c_diff)
+                L_diffs.append(l_diff)
+                cart_pos_diffs.append(cart_pos_diff)
 
-#             triple_ephem_df[pref + 'h_diff'] = H_diffs
-#             triple_ephem_df[pref + 'c_diff'] = C_diffs
-#             triple_ephem_df[pref + 'l_diff'] = L_diffs
-#             triple_ephem_df[pref + 'cart_pos_diff'] = cart_pos_diffs
-#             # convert 'jd_time' to mjd_time for plotting
-#             triple_ephem_df['mjd_time'] = triple_ephem_df['jd_time'] - 2400000.5
+            triple_ephem_df[pref + 'h_diff'] = H_diffs
+            triple_ephem_df[pref + 'c_diff'] = C_diffs
+            triple_ephem_df[pref + 'l_diff'] = L_diffs
+            triple_ephem_df[pref + 'cart_pos_diff'] = cart_pos_diffs
+            # convert 'jd_time' to mjd_time for plotting
+            triple_ephem_df['mjd_time'] = triple_ephem_df['jd_time'] - 2400000.5
 
-#         all_triple_ephems.append(triple_ephem_df)
+        all_triple_ephems.append(triple_ephem_df)
+    print("all_triple_ephems is: ", all_triple_ephems)
+    return all_triple_ephems

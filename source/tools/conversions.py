@@ -4,11 +4,12 @@ Time and coordinate conversions
 import numpy as np
 import warnings
 from astropy import units as u
+import astropy.units as units
 from astropy.time import Time
 from poliastro.bodies import Earth
 from poliastro.twobody import Orbit
 import datetime
-from astropy.coordinates import GCRS, ITRS, CartesianRepresentation, CartesianDifferential
+from astropy.coordinates import GCRS, ITRS, CartesianRepresentation, CartesianDifferential, SkyCoord, GCRS, CIRS, TEME, TETE, ITRS, ICRS
 from pyproj import Transformer
 from typing import List, Tuple
 
@@ -316,6 +317,26 @@ def parse_spacex_datetime_stamps(timestamps):
 
 def yyyy_mm_dd_hh_mm_ss_to_jd(year, month, day, hour, minute, second, milisecond):
     """Convert year, month, day, hour, minute, second to datetime object and then to julian date."""
-    dt_obj = datetime(year, month, day, hour, minute, second, milisecond*1000)
+    dt_obj = datetime.datetime(year, month, day, hour, minute, second, milisecond*1000)
     jd = Time(dt_obj).jd
     return jd
+
+def TEME_to_MEME(x, y, z, u, v, w, jd_time):
+    """ convert from the ECI frame used for the NORAD two-line elements: sometimes called true equator, mean equinox (TEME) although it does not use the conventional mean equinox to the mean equator and mean equinox (MEME i.e. GCRS) frame used by the spacex ephemeris.
+    """
+    # convert to astropy time object
+    astropy_time = Time(jd_time, format='jd')
+    # convert to astropy skycoord object
+    skycoord = SkyCoord(x, y, z, unit='km', representation_type='cartesian', frame=TEME(obstime=astropy_time))
+    # convert to GCRS frame
+    gcrs = skycoord.transform_to(GCRS(obstime=astropy_time))
+    # convert to cartesian coordinates
+    x, y, z = gcrs.cartesian.xyz.to(units.km)
+    # convert to astropy skycoord object
+    skycoord = SkyCoord(u, v, w, unit='km/s', representation_type='cartesian', frame=TEME(obstime=astropy_time))
+    # convert to GCRS frame
+    gcrs = skycoord.transform_to(GCRS(obstime=astropy_time))
+    # convert to cartesian coordinates
+    u, v, w = gcrs.cartesian.xyz.to(units.km/units.s)
+    
+    return x.value, y.value, z.value, u.value, v.value, w.value
