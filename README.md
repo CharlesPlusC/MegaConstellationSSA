@@ -87,7 +87,8 @@ __Cross-track/along-track/height/3D difference time-series subplots__
 ![Oneweb Cdiff subplots](output/plots/timseries_subplots/c_diffs_subplots_OneWeb.png)
 
 __Constellation Ground Tracks__
-<img src="output/plots/ground_tracks/g_tracks.png" width="50%" height="50%">
+
+<img src="output/plots/ground_tracks/g_tracks.png" width="80%" height="80%">
 
 __Relation between error and Geographical Location__
 <img src="output/plots/ground_tracks/diffs_gtrax/OneWeb_l_diffs.png" width="50%" height="50%">
