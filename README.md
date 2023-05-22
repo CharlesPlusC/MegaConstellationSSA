@@ -88,10 +88,10 @@ __Cross-track/along-track/height/3D difference time-series subplots__
 
 __Constellation Ground Tracks__
 
-<img src="output/plots/ground_tracks/g_tracks.png" width="80%" height="80%">
+<img src="output/plots/ground_tracks/g_tracks.png">
 
 __Relation between error and Geographical Location__
-<img src="output/plots/ground_tracks/diffs_gtrax/OneWeb_l_diffs.png" width="50%" height="50%">
+<img src="output/plots/ground_tracks/diffs_gtrax/OneWeb_l_diffs.png">
 
 __Launch statistics__
 Summary statistics of the analysis are generated and can be found in the _"output/launch_specific/launch_summary_stats.csv"_ folder.
