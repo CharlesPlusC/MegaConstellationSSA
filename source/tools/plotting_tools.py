@@ -11,6 +11,8 @@ from mpl_toolkits.basemap import Basemap
 import json
 from scipy import signal
 from typing import Dict, List, Union
+from collections import defaultdict
+
 
 #local imports
 from .analysis_tools import compute_fft
@@ -537,6 +539,89 @@ def plot_ground_tracks(list_of_dfs: List[pd.DataFrame] = [], show: bool = False)
     # Show the plot if show is set to True
     if show:
         plt.show()
+
+def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int = 1, show: bool = False) -> None:
+    
+    for diff_type in diff_types:
+
+        # group data by constellation
+        grouped_dfs = defaultdict(list)
+        for df in list_of_dfs:
+            constellationname = df['constellation'][0]
+            grouped_dfs[constellationname].append(df)
+
+        for constellationname, df_group in grouped_dfs.items():
+            # make a figure with 1 subplot
+            fig, axs = plt.subplots(1, 1, figsize=(8, 5))
+
+            # Store the differences, means, and standard deviations for each DataFrame
+            diff_vals = []
+            mean_diff = []
+            std_diff = []
+            for df in df_group:
+                # calculate the mean and standard deviation of the differences for this DataFrame
+                diff_vals.append(df[diff_type])
+                mean_diff.append(np.mean(df[diff_type]))
+                std_diff.append(np.std(df[diff_type]))
+
+            # calculate the mean of the mean and standard deviations of the differences
+            mean_mean_diff = np.mean(mean_diff)
+            mean_std_diff = np.mean(std_diff)
+            # find the max and min values of the differences
+            max_diff = mean_mean_diff + criteria*mean_std_diff
+            min_diff = mean_mean_diff - criteria*mean_std_diff
+
+            print("constellation: ", constellationname)
+
+            # make a new dataframe with only the values of diff_type that are within plus or minus `criteria` standard deviations of the mean
+            criteria_df_list = []
+            for df in df_group:
+                criteria_df_list.append(df[df[diff_type] < max_diff])
+                criteria_df_list.append(df[df[diff_type] > min_diff])
+
+            criteria_df = pd.concat(criteria_df_list, ignore_index=True)
+
+            plt.set_cmap('seismic')
+            # make the map
+            m = Basemap(projection='mill', llcrnrlat=-90, urcrnrlat=90, llcrnrlon=-180, urcrnrlon=180, resolution='c')
+            m.drawcoastlines()
+            m.drawcountries()
+            m.drawmapboundary(fill_color='xkcd:light grey')
+            
+            # plot the points and colour them by diff_type, where the higher the value the darker the colour
+            m.scatter(criteria_df['lons'], criteria_df['lats'], latlon=True, alpha=0.3, s=0.3, c = criteria_df[diff_type], cmap='seismic', vmin=min_diff, vmax=max_diff)
+
+            #define mappable object
+            sm = plt.cm.ScalarMappable(cmap='seismic', norm=plt.Normalize(vmin=min_diff, vmax=max_diff))
+            # create colour bar
+            cbar = m.colorbar(sm, location='right', pad="5%")
+            # add Km label to colour bar
+            cbar.set_label('Km', rotation=90, labelpad=10)
+            # add parallels and meridians
+            m.drawparallels(np.arange(-90., 120., 30.), labels=[1,0,0,0], fontsize=10)
+            m.drawmeridians(np.arange(-180., 181., 60.), labels=[0,0,0,1], fontsize=10)
+
+            # set the title
+            if diff_type == 'cart_pos_diffs':
+                axs.set_title(r'$\Delta$ 3D: ' + str(constellationname), fontsize=11)
+            elif diff_type == 'h_diffs':
+                axs.set_title(r'$\Delta$ H: '+ str(constellationname), fontsize=11)
+            elif diff_type == 'l_diffs':
+                axs.set_title(r'$\Delta$ L: '+ str(constellationname), fontsize=11)
+            elif diff_type == 'c_diffs':
+                axs.set_title(r'$\Delta$ C: '+ str(constellationname), fontsize=11)
+            # add the mean and standard deviation of the differences to the plot
+            axs.text(0.05, 0.95, 'Mean: ' + str(round(mean_mean_diff, 3)) + ' Km', transform=axs.transAxes, fontsize=10, verticalalignment='top')
+            axs.text(0.05, 0.90, 'Std: ' + str(round(mean_std_diff, 3)) + ' Km', transform=axs.transAxes, fontsize=10, verticalalignment='top')
+
+            plt.tight_layout()
+                # save the figure
+            plt.savefig('output/plots/ground_tracks/diffs_gtrax/' + str(constellationname) + '_' + str(diff_type) + '.png', dpi=300)
+
+            if show == True:
+                plt.show()
+            plt.close()  # close the plot after saving to avoid overlapping
+
 
 if __name__ == "__main__":
     pass
