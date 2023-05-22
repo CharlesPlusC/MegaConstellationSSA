@@ -11,9 +11,11 @@ import requests
 import numpy as np
 from sgp4.api import Satrec
 import datetime
+from astropy.time import Time
+import pandas as pd
 
 #local imports
-from .conversions import kep2car
+from .conversions import kep2car, parse_spacex_datetime_stamps, yyyy_mm_dd_hh_mm_ss_to_jd
 
 class MyError(Exception):
     def __init___(self, args):
@@ -464,3 +466,53 @@ def combine_TLE2eph(TLE_list, jd_start, jd_stop, dt=(15 * 60)):
 
     return ephemeris, orbit_ages
 
+def read_spacex_ephemeris(ephem_path):
+    # read the first 5 lines of the operator ephem file
+    with open(ephem_path) as f:
+        ephem_lines = f.readlines()
+    ephem_lines = ephem_lines[:5]
+    ephem_utc_start = str(ephem_lines[1][16:16+19]) # start time
+    ephem_utc_end = str(ephem_lines[1][55:55+19]) # end time
+    ephem_step_size = int(ephem_lines[1][89:89+2]) # step size
+    #convert to datetime object
+    ephem_utc_dt_obj_start = datetime.datetime.strptime(ephem_utc_start, '%Y-%m-%d %H:%M:%S')
+    ephem_utc_dt_obj_end = datetime.datetime.strptime(ephem_utc_end, '%Y-%m-%d %H:%M:%S')
+    # convert to julian date
+    ephem_start_jd_dt_obj = Time(ephem_utc_dt_obj_start).jd
+    ephem_end_jd_dt_obj = Time(ephem_utc_dt_obj_end).jd
+
+    return ephem_start_jd_dt_obj, ephem_end_jd_dt_obj, ephem_step_size
+
+def spacex_ephem_to_dataframe(ephem_path):
+    # read in the text file 
+    with open(ephem_path) as f:
+        lines = f.readlines()
+    # remove the header lines
+    lines = lines[4:]
+    # select every 4th line
+    t_xyz_uvw = lines[::4]
+    # from all the lines in t_xyz_uvw select the first float in each line and append that to a list
+    t = [float(i.split()[0]) for i in t_xyz_uvw]
+    x = [float(i.split()[1]) for i in t_xyz_uvw]
+    y = [float(i.split()[2]) for i in t_xyz_uvw]
+    z = [float(i.split()[3]) for i in t_xyz_uvw]
+    u = [float(i.split()[4]) for i in t_xyz_uvw]
+    v = [float(i.split()[5]) for i in t_xyz_uvw]
+    w = [float(i.split()[6]) for i in t_xyz_uvw]
+    
+    # make all the values in the list 't' into a numpy array
+    tstamp_array = np.array(t)
+    # parse the timestamps into year, day of year, hour, minute, and second
+    parsed_tstamps = parse_spacex_datetime_stamps(tstamp_array)
+    # convert the parsed timestamps into julian dates
+    jd_stamps = np.zeros(len(parsed_tstamps))
+    for i in range(0, len(parsed_tstamps), 1):
+        jd_stamps[i] = yyyy_mm_dd_hh_mm_ss_to_jd(int(parsed_tstamps[i][0]), int(parsed_tstamps[i][1]), int(parsed_tstamps[i][2]), int(parsed_tstamps[i][3]), int(parsed_tstamps[i][4]), int(parsed_tstamps[i][5]), int(parsed_tstamps[i][6]))
+
+    # take t, x, y, z, u, v, w and put them into a dataframe
+    spacex_ephem_df = pd.DataFrame({'jd_time':jd_stamps, 'x':x, 'y':y, 'z':z, 'u':u, 'v':v, 'w':w})
+    # use the function meme_2_teme() to convert the x, y, z, u, v, w values from the MEME frame to the TEME frame
+    # remove the last row from spacex_ephem_df
+    spacex_ephem_df = spacex_ephem_df[:-1]
+
+    return spacex_ephem_df

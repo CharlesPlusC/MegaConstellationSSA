@@ -14,7 +14,7 @@ import scipy as sp
 import scipy.fftpack
 
 #local imports
-from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph, load_satellite_lists
+from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph, load_satellite_lists, read_spacex_ephemeris, spacex_ephem_to_dataframe
 from .conversions import jd_to_utc, utc_jd_date, midnight_jd_date, HCL_diff, dist_3d, alt_series, ecef_to_lla, eci2ecef_astropy, eci2latlon, TEME_to_MEME, parse_spacex_datetime_stamps, yyyy_mm_dd_hh_mm_ss_to_jd
 
 rmse = lambda x: np.sqrt(np.mean(np.square(x)))
@@ -487,32 +487,27 @@ def compute_fft(df: pd.DataFrame, diff_type: str) -> Tuple[np.ndarray, np.ndarra
     return fftfreqs[im], 10 * np.log10(diff_psd[im])
 
 def find_files_sup_gp_op(folder_path = 'external/ephem_TLE_compare'):
-    sup_list = []
-    gp_list = []
-    ephem_list = []
-    # each folder is specific to a launch
-    for sc_folder in os.listdir(folder_path):
-        # go throgh each file in the launch folder
-        for file in os.listdir(folder_path + '/' + sc_folder):
-            # if the file starts with 'sup' then it is a suplimental TLE
-            if file.startswith('sup'):
-                sup_list.append(folder_path + '/' + sc_folder + '/' + file)
-            # if the file starts with 'gp' then it is a gp TLE
-            elif file.startswith('gp'):
-                gp_list.append(folder_path + '/' + sc_folder + '/' + file)
-            # if the file starts with 'MEME' then it is a ephemeris
-            elif file.startswith('MEME'):
-                ephem_list.append(folder_path + '/' + sc_folder + '/' + file)
-    # check that the lists are the same length else throw an error
-    try:
-        assert len(sup_list) == len(gp_list) == len(ephem_list)
-    except AssertionError:
-        print('sup_list, gp_list, and ephem_list are not the same length')
-        return
+    """
+    This function returns a list of file paths for files in the given directory.
     
+    Args:
+        folder_path (str): Path to the directory.
+    
+    Returns:
+        list: List of file paths.
+    """
+    sup_list, gp_list, ephem_list = [], [], []
+    for sc_folder in os.listdir(folder_path):
+        for file in os.listdir(os.path.join(folder_path, sc_folder)):
+            if file.startswith('sup'):
+                sup_list.append(os.path.join(folder_path, sc_folder, file))
+            elif file.startswith('gp'):
+                gp_list.append(os.path.join(folder_path, sc_folder, file))
+            elif file.startswith('MEME'):
+                ephem_list.append(os.path.join(folder_path, sc_folder, file))
     return sup_list, gp_list, ephem_list
 
-def sup_gp_op_triple_ephemeris():
+def sup_gp_op_benchmark():
     sup_list, gp_list, ephem_list = find_files_sup_gp_op()
         
 #     # now going through each spacecraft
@@ -521,6 +516,7 @@ def sup_gp_op_triple_ephemeris():
     all_gp_ages = [] # list of the ages of the gp TLEs
     all_sup_tle_epochs = [] # list of the epochs of the suplemental TLEs
     all_gp_tle_epochs = [] # list of the epochs of the gp TLEs
+
     for i in range(len(sup_list)):
         #read the first 5 lines of the ephem file
         sup_path = sup_list[i]
@@ -528,24 +524,14 @@ def sup_gp_op_triple_ephemeris():
         ephem_path = ephem_list[i]
 
         # read the first 5 lines of the operator ephem file
-        with open(ephem_path) as f:
-            ephem_lines = f.readlines()
-        ephem_lines = ephem_lines[:5]
-        ephem_utc_start = str(ephem_lines[1][16:16+19]) # start time
-        ephem_utc_end = str(ephem_lines[1][55:55+19]) # end time
-        ephem_step_size = int(ephem_lines[1][89:89+2]) # step size
-        #convert to datetime object
-        ephem_utc_dt_obj_start = datetime.datetime.strptime(ephem_utc_start, '%Y-%m-%d %H:%M:%S')
-        ephem_utc_dt_obj_end = datetime.datetime.strptime(ephem_utc_end, '%Y-%m-%d %H:%M:%S')
-        # convert to julian date
-        ephem_start_jd_dt_obj = Time(ephem_utc_dt_obj_start).jd
-        ephem_end_jd_dt_obj = Time(ephem_utc_dt_obj_end).jd
+        ephem_start_jd_dt_obj, ephem_end_jd_dt_obj, ephem_step_size = read_spacex_ephemeris(ephem_path)
 
         gp_TLE_list = read_TLEs(gp_path)
         sup_TLE_list = read_TLEs(sup_path)
 
         sup_tle_epochs = [TLE_time(TLE) for TLE in sup_TLE_list]
         all_sup_tle_epochs.append(sup_tle_epochs)
+
         gp_tle_epochs = [TLE_time(TLE) for TLE in gp_TLE_list]
         all_gp_tle_epochs.append(gp_tle_epochs)
 
@@ -564,14 +550,11 @@ def sup_gp_op_triple_ephemeris():
         # now compare the end date of all data sources (ephemeris, sup, gp)
         gp_end = TLE_time(gp_TLE_list[-1])
         sup_end = TLE_time(sup_TLE_list[-1])
-            # find the earliest end date and assign it to a variable called compare_end
-        compare_end = min(ephem_end_jd_dt_obj, gp_end, sup_end)
-            # set this as the end time for the combine_TLE2eph function
-        # now go through the ephemeris and find the step size. Use this to set the dt variable for the combine_TLE2eph function
-        # now make ephemerides using the GP and SUP TLEs
 
-        sup_eph, sup_ages = combine_TLE2eph(TLE_list=gp_TLE_list, jd_start=ephem_start_jd_dt_obj, jd_stop=ephem_end_jd_dt_obj, dt=ephem_step_size)
+        # now make ephemerides using the GP and SUP TLEs
+        sup_eph, sup_ages = combine_TLE2eph(TLE_list=sup_TLE_list, jd_start=ephem_start_jd_dt_obj, jd_stop=ephem_end_jd_dt_obj, dt=ephem_step_size)
         gp_eph, gp_ages = combine_TLE2eph(TLE_list=gp_TLE_list, jd_start=ephem_start_jd_dt_obj, jd_stop=ephem_end_jd_dt_obj, dt=ephem_step_size)
+        
         # save the ages of the TLEs
         all_sup_ages.append(sup_ages)
         all_gp_ages.append(gp_ages)
@@ -591,39 +574,9 @@ def sup_gp_op_triple_ephemeris():
 
         #merge the two dataframes
         sup_n_gp_df = pd.merge(sup_df, gp_df, left_on = 'sup_jd', right_on = 'gp_jd')
-        print(sup_n_gp_df.head())
-        print("shape of sup_n_gp_df is: ", sup_n_gp_df.shape)
 
         # read in the text file 
-        with open(ephem_path) as f:
-            lines = f.readlines()
-        # remove the header lines
-        lines = lines[4:]
-        # select every 4th line
-        t_xyz_uvw = lines[::4]
-        # from all the lines in t_xyz_uvw select the first float in each line and append that to a list
-        t = [float(i.split()[0]) for i in t_xyz_uvw]
-        x = [float(i.split()[1]) for i in t_xyz_uvw]
-        y = [float(i.split()[2]) for i in t_xyz_uvw]
-        z = [float(i.split()[3]) for i in t_xyz_uvw]
-        u = [float(i.split()[4]) for i in t_xyz_uvw]
-        v = [float(i.split()[5]) for i in t_xyz_uvw]
-        w = [float(i.split()[6]) for i in t_xyz_uvw]
-        
-        # make all the values in the list 't' into a numpy array
-        tstamp_array = np.array(t)
-        # parse the timestamps into year, day of year, hour, minute, and second
-        parsed_tstamps = parse_spacex_datetime_stamps(tstamp_array)
-        # convert the parsed timestamps into julian dates
-        jd_stamps = np.zeros(len(parsed_tstamps))
-        for i in range(0, len(parsed_tstamps), 1):
-            jd_stamps[i] = yyyy_mm_dd_hh_mm_ss_to_jd(int(parsed_tstamps[i][0]), int(parsed_tstamps[i][1]), int(parsed_tstamps[i][2]), int(parsed_tstamps[i][3]), int(parsed_tstamps[i][4]), int(parsed_tstamps[i][5]), int(parsed_tstamps[i][6]))
-
-        # take t, x, y, z, u, v, w and put them into a dataframe
-        spacex_ephem_df = pd.DataFrame({'jd_time':jd_stamps, 'x':x, 'y':y, 'z':z, 'u':u, 'v':v, 'w':w})
-        # use the function meme_2_teme() to convert the x, y, z, u, v, w values from the MEME frame to the TEME frame
-        # remove the last row from spacex_ephem_df
-        spacex_ephem_df = spacex_ephem_df[:-1]
+        spacex_ephem_df = spacex_ephem_to_dataframe(ephem_path)
 
         # merge the two dataframes (on index since the time stamps are off by around 8 seconds after 24 hours)
         triple_ephem_df = pd.merge(sup_n_gp_df, spacex_ephem_df, left_index = True, right_index = True)
@@ -673,3 +626,4 @@ def sup_gp_op_triple_ephemeris():
         all_triple_ephems.append(triple_ephem_df)
     print("all_triple_ephems is: ", all_triple_ephems)
     return all_triple_ephems
+
