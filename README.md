@@ -54,7 +54,7 @@ password = YourPassword
 ```
 5. Ensure that SLTrack.ini is in the .gitignore file so that it is not uploaded to the repository (it should be by default)
 
-6. Simply run main.py for the full analysis to run from start to finish.
+6. Run main.py as it is for the full analysis to run from start to finish, or modify it to suit your needs.
 
 ## Information:
 
