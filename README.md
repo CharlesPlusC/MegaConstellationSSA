@@ -63,6 +63,9 @@ The state vectors for each spacecraft orbit are continuously updated with new TL
 
 <img src="misc/TLE_algo_outline.png" width="50%" height="50%">
 
+__Data Manipulation:__
+Each NORAD ID is assigned a Pandas Dataframe. All the data relevant to each launch (epehemerides, differences between the ephemerides, lat, lon, etc.) are all included in the NORAD ID's respective dataframe. To calculate or perform analyses on these, most functions are geared towards reading lists of Pandas Dataframes.
+
 ## Data
 - The data for the SUP_TLEs and NORAD_TLEs are already provided to save time. 
     If you wish to re-download the data yourself, you can do so for the NORAD TLEs by running the getdata.py script. Note that there is currently no way of downloading SUP_TLE data programatically so you will have to do this manually from celestrak.org.
