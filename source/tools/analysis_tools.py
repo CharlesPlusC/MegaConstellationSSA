@@ -8,7 +8,7 @@ import numpy as np
 import datetime
 import json
 from multiprocessing import Pool
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from astropy.time import Time
 import scipy as sp
 import scipy.fftpack
@@ -644,28 +644,61 @@ def get_NORADS_from_JSON(selected_satellites='external/selected_satellites.json'
     
     return ids_list
 
-def TLE_arglat_dict(selected_satellites='external/selected_satellites.json', tle_folder = 'external/NORAD_TLEs'):
-    # calculate the argument of latitude for all the available NORAD IDs for all of the selected satellites
-    loloNORAD = get_NORADS_from_JSON(selected_satellites) #list of list of NORAD IDS per constellation
-    const_TLE_arglat_ls = [] #list of dictionaries of TLE times per NORAD ID separated by constellation
-    for const in loloNORAD:
-        TLE_arglat_dict = {}
-        for i in os.listdir(tle_folder):
-            #keep only the text files
-            tle_file = tle_folder + i
-            sc_TLE_arglats = [] #list of TLE times for each NORAD ID
-            # get NORAD ID by getting the 5 digits before the '.txt' in the file name
-            no_txt = i[:-4]
-            #make a variable called NORAD that contains just the numbers from the string (no '.txt')
-            NORAD = int(''.join(filter(str.isdigit, no_txt)))
-            if NORAD in const: # if the NORAD ID is part of the constellation we are looking at
-                TLEs = read_TLEs(tle_file) #read the TLEs from the text file
-                for i in range(len(TLEs)): #for each TLE
-                    tle_dict = twoLE_parse(TLEs[i]) #parse the TLE
-                    kep_elem = tle_convert(tle_dict)  #convert the TLE to Keplerian elements
-                    argument_of_latitude = (kep_elem['arg_p'] + kep_elem['true_anomaly']) % (2*np.pi) # calcualte the argument of latitude in radians
-                    arg_lat = argument_of_latitude * 180/np.pi #convert to degrees
-                    sc_TLE_arglats.append(arg_lat) #append to the list of TLE arglats for that NORAD ID
-                TLE_arglat_dict[NORAD] = sc_TLE_arglats #add the list of TLE arglats to the dictionary for that NORAD ID
-        const_TLE_arglat_ls.append(TLE_arglat_dict) #add the dictionary of NORAD IDs and TLE arglats to the list of dictionaries for each constellation
-    return const_TLE_arglat_ls #return the list of dictionaries for each constellation
+def TLE_arglat_dict(selected_satellites: str='external/selected_satellites.json', tle_folder: str='external/NORAD_TLEs/') -> List[Dict[int, List[float]]]:
+    """
+    Generate a list of dictionaries containing argument of latitude values for each NORAD ID in each satellite constellation.
+
+    This function reads NORAD Two-Line Element (TLE) data for selected satellites from JSON and text files, parses and
+    converts the TLE data into Keplerian elements, calculates the argument of latitude in degrees for each TLE, and 
+    organizes this data into dictionaries.
+
+    Parameters
+    ----------
+    selected_satellites : str, optional
+        Path to the JSON file containing the selected satellites' NORAD IDs. 
+        Each entry in the JSON file should correspond to a constellation. Defaults to 'external/selected_satellites.json'.
+    tle_folder : str, optional
+        Path to the folder containing the TLE text files for each NORAD ID. Defaults to 'external/NORAD_TLEs/'.
+
+    Returns
+    -------
+    const_TLE_arglat_ls : list of dict of {int: list of float}
+        List of dictionaries, where each dictionary corresponds to a constellation. 
+        Each dictionary's keys are NORAD IDs, and the values are lists of argument of latitude values for each TLE.
+
+    Notes
+    -----
+    This function relies on the helper functions `read_TLEs`, `twoLE_parse`, and `tle_convert`,
+    which are responsible for reading the NORAD IDs from the JSON file, reading TLEs from the text files, parsing the TLEs,
+    and converting the TLEs to Keplerian elements, respectively.
+    """
+    with open(selected_satellites, 'r') as f:
+        data = json.load(f)
+
+    const_TLE_arglat_dict = {} #dictionary of dictionaries of TLE times per NORAD ID separated by constellation
+
+    for constellation, launches in data.items():
+        TLE_arglat_dict = {} 
+        for launch, NORAD_IDs in launches.items():
+            for NORAD in NORAD_IDs:
+                for i in os.listdir(tle_folder):
+                    #keep only the text files
+                    tle_file = tle_folder + i
+                    sc_TLE_arglats = [] #list of TLE times for each NORAD ID
+                    # get NORAD ID by getting the 5 digits before the '.txt' in the file name
+                    no_txt = i[:-4]
+                    #make a variable called file_NORAD that contains just the numbers from the string (no '.txt')
+                    file_NORAD = int(''.join(filter(str.isdigit, no_txt)))
+
+                    if file_NORAD == NORAD: # if the NORAD ID is part of the constellation we are looking at
+                        TLEs = read_TLEs(tle_file) #read the TLEs from the text file
+                        for i in range(len(TLEs)): #for each TLE
+                            tle_dict = twoLE_parse(TLEs[i]) #parse the TLE
+                            kep_elem = tle_convert(tle_dict)  #convert the TLE to Keplerian elements
+                            # argp is in radians, true_anomaly is in degrees
+                            argument_of_latitude = (kep_elem['arg_p'] + np.deg2rad(kep_elem['true_anomaly'])) % (2*np.pi) #calculate the argument of latitude
+                            arg_lat = argument_of_latitude * 180/np.pi #convert the argument of latitude to degrees
+                            sc_TLE_arglats.append(arg_lat) #append to the list of TLE arglats for that NORAD ID
+                        TLE_arglat_dict[NORAD] = sc_TLE_arglats #add the list of TLE arglats to the dictionary for that NORAD ID
+        const_TLE_arglat_dict[constellation] = TLE_arglat_dict #add the dictionary of NORAD IDs and TLE arglats to the dictionary for each constellation
+    return const_TLE_arglat_dict #return the dictionary of dictionaries for each constellation

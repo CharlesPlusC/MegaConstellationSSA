@@ -8,15 +8,17 @@ from matplotlib.patches import Patch
 import matplotlib.patches as mpatches
 import matplotlib as mpl
 from mpl_toolkits.basemap import Basemap
+import matplotlib.gridspec as gridspec
 import json
 from scipy import signal
 from typing import Dict, List, Union
 from collections import defaultdict
+from brokenaxes import brokenaxes
 
 
 #local imports
 from .conversions import jd_to_mjd
-from .analysis_tools import compute_fft, sup_gp_op_benchmark
+from .analysis_tools import TLE_arglat_dict, compute_fft, sup_gp_op_benchmark
 
 # Set the default font size for the plots
 mpl.rcParams['font.size'] = 11
@@ -646,101 +648,18 @@ def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int 
             plt.close()  # close the plot after saving to avoid overlapping
 
 
-def extract_norad_ids(gp_list):
-    return [gp_path[-9:-4] for gp_path in gp_list]
+# def extract_norad_ids(gp_list):
+#     return [gp_path[-9:-4] for gp_path in gp_list]
 
-def configure_plot_attributes(axis, color, time, value, line_style, line_width):
-    for index in range(len(time)):
-        axis.axvline(x=time[index], color=color, linestyle=line_style, linewidth=line_width)
+# def configure_plot_attributes(axis, color, time, value, line_style, line_width):
+#     for index in range(len(time)):
+#         axis.axvline(x=time[index], color=color, linestyle=line_style, linewidth=line_width)
 
-def configure_subplot(axis, color, title, time, value, y_label, sup_time, gp_time):
-    axis.plot(time, value, label='GP', color=color)
-    axis.grid(True)
-    configure_plot_attributes(axis, color, sup_time, value, 'dotted', 2)
-    configure_plot_attributes(axis, color, gp_time, value, 'dotted', 2)
-
-# def benchmark_plot():
-#     # get benchmark data
-#     all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list = sup_gp_op_benchmark()
-#     # TODO: see if i can get all_sup_tle_epochs, all_gp_tle_epochs, gp_list from all_triple_ephems instead of passing giant lists around.
-#     print(all_triple_ephems)
-
-#     # slice all_triple_ephems to be left with the first 7/8rds of the data in each dataframe
-#     all_triple_ephems = [ephem[:int(len(ephem)*(7/8))] for ephem in all_triple_ephems]
-
-#     # convert all_sup_tle_epochs and all_gp_tle_epochs to mjd_time
-#     all_sup_tle_epochs = list(map(jd_to_mjd, all_sup_tle_epochs))
-#     all_gp_tle_epochs = list(map(jd_to_mjd, all_gp_tle_epochs))
-
-#         #convert all_sup_tle_epochs and all_gp_tle_epochs to mjd_time
-#     for i in range(len(all_sup_tle_epochs)):
-#         all_sup_tle_epochs[i] = [i - 2400000.5 for i in all_sup_tle_epochs[i]]
-
-#     for i in range(len(all_gp_tle_epochs)):
-#         all_gp_tle_epochs[i] = [i - 2400000.5 for i in all_gp_tle_epochs[i]]
-
-#     # Extract NORAD IDs from the GP ephemeris files
-#     NORAD_IDs = extract_norad_ids(gp_list)
-
-#     fig, ax = plt.subplots(4, len(all_triple_ephems), figsize=(4*len(all_triple_ephems), 6))
-
-#     GP_colour = 'xkcd:blue'
-#     SUP_colour = 'xkcd:coral'
-
-#     fonts = 12
-
-#     for i in range(len(all_triple_ephems)):
-#         # For each NORAD ID, plot h, c, l, and 3D position differences against jd_time for both GP and SUP
-#         if i == 0:
-#             ax[0, i].set_ylabel(r'$\Delta$ H (km)', fontsize=fonts)
-#         else:
-#             ax[0, i].set_yticklabels([])
-
-#         #plot GP data
-#         configure_subplot(ax[0, i], GP_colour, 'NORAD ID: ' + NORAD_IDs[i], all_triple_ephems[i]['mjd_time'].values,
-#                         all_triple_ephems[i]['gp_h_diff'].values, r'$\Delta$ H (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
-#         #plot SUP data
-#         configure_subplot(ax[0, i], SUP_colour, '', all_triple_ephems[i]['mjd_time'].values, 
-#                           all_triple_ephems[i]['sup_h_diff'].values, r'$\Delta$ H (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
-
-
-#         if i == 0:
-#             ax[1, i].set_ylabel(r'$\Delta$ C (km)', fontsize=fonts)
-#         else:
-#             ax[1, i].set_yticklabels([])
-
-#         configure_subplot(ax[1, i], GP_colour, '', all_triple_ephems[i]['mjd_time'].values,
-#                         all_triple_ephems[i]['gp_c_diff'].values, r'$\Delta$ C (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
-#         configure_subplot(ax[1, i], SUP_colour, '', all_triple_ephems[i]['mjd_time'].values, 
-#                           all_triple_ephems[i]['sup_c_diff'].values, r'$\Delta$ H (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
-
-#         if i == 0:
-#             ax[2, i].set_ylabel(r'$\Delta$ L (km)', fontsize=fonts)
-#         else:
-#             ax[2, i].set_yticklabels([])
-
-#         configure_subplot(ax[2, i], GP_colour, '', all_triple_ephems[i]['mjd_time'].values,
-#                         all_triple_ephems[i]['gp_l_diff'].values, r'$\Delta$ L (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
-#         configure_subplot(ax[2, i], SUP_colour, '', all_triple_ephems[i]['mjd_time'].values, 
-#                           all_triple_ephems[i]['sup_l_diff'].values, r'$\Delta$ H (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
-
-#         if i == 0:
-#             ax[3, i].set_ylabel(r'$\Delta$ 3D (km)', fontsize=fonts)
-#         else:
-#             ax[3, i].set_yticklabels([])
-
-#         configure_subplot(ax[3, i], GP_colour, '', all_triple_ephems[i]['mjd_time'].values, 
-#                           all_triple_ephems[i]['gp_cart_pos_diff'].values, r'$\Delta$ 3D (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
-#         configure_subplot(ax[3, i], SUP_colour, '', all_triple_ephems[i]['mjd_time'].values, 
-#                           all_triple_ephems[i]['sup_cart_pos_diff'].values, r'$\Delta$ H (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
-
-#     handles, labels = ax[0, 0].get_legend_handles_labels()
-#     fig.legend(handles, labels, loc='center right', ncol=1, fontsize=fonts)
-
-#     plt.tight_layout()
-#     plt.savefig('output/plots/benchmark/SUPvsGPvsOp_06022023.png', dpi=600)
-
-#     plt.show()
+# def configure_subplot(axis, color, title, time, value, y_label, sup_time, gp_time):
+#     axis.plot(time, value, label='GP', color=color)
+#     axis.grid(True)
+#     configure_plot_attributes(axis, color, sup_time, value, 'dotted', 2)
+#     configure_plot_attributes(axis, color, gp_time, value, 'dotted', 2)
 
 def benchmark_plot():
     all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list = sup_gp_op_benchmark()
@@ -877,6 +796,86 @@ def benchmark_plot():
     plt.savefig('output/plots/benchmark/SUPvsGPvsOp_06022023.png', dpi=300)
 
     plt.show()
+
+def plot_arglat_analysis(show=False):
+    GP_arglats = TLE_arglat_dict(selected_satellites='external/selected_satellites.json', tle_folder = 'external/NORAD_TLEs/')
+    SUP_arglats = TLE_arglat_dict(selected_satellites='external/selected_satellites.json', tle_folder = 'external/SUP_TLEs/')
+
+    # Flatten list of lists
+    oneweb_gp = [value for key, value in GP_arglats["oneweb"].items()]
+    oneweb_gp_flat = [arglat for sublist in oneweb_gp for arglat in sublist]
+    
+    starlink_gp = [value for key, value in GP_arglats["starlink"].items()]
+    starlink_gp_flat = [arglat for sublist in starlink_gp for arglat in sublist]
+    
+    oneweb_sup = [value for key, value in SUP_arglats["oneweb"].items()]
+    oneweb_sup_flat = [arglat for sublist in oneweb_sup for arglat in sublist]
+    
+    starlink_sup = [value for key, value in SUP_arglats["starlink"].items()]
+    starlink_sup_flat = [arglat for sublist in starlink_sup for arglat in sublist]
+
+    # Calculate the total number of data points in each list
+    ow_norad_total = len(oneweb_gp_flat)
+    ow_sup_total = len(oneweb_sup_flat)
+    sl_norad_total = len(starlink_gp_flat)
+    sl_sup_total = len(starlink_sup_flat)
+
+    # Create weights for each dataset to normalize the histogram counts
+    ow_norad_weights = np.ones_like(oneweb_gp_flat) / ow_norad_total
+    ow_sup_weights = np.ones_like(oneweb_sup_flat) / ow_sup_total
+    sl_norad_weights = np.ones_like(starlink_gp_flat) / sl_norad_total
+    sl_sup_weights = np.ones_like(starlink_sup_flat) / sl_sup_total
+
+    fig, axs = plt.subplots(2, 2, figsize=(8, 5), sharex='col', sharey='none', 
+                            gridspec_kw={'height_ratios': [1, 3], 'wspace': 0.05, 'hspace': 0.15})
+
+    axs[0, 0].hist(oneweb_gp_flat, bins=30, weights=ow_norad_weights, alpha=0.5, label='NORAD TLEs', color="xkcd:azure")
+    axs[0, 0].hist(oneweb_sup_flat, bins=30, weights=ow_sup_weights, alpha=0.5, label='SUP TLEs', color="xkcd:blue")
+    axs[0, 0].set_ylim(0.7, 0.8)
+
+    axs[1, 0].hist(oneweb_gp_flat, bins=30, weights=ow_norad_weights, alpha=0.5, label='NORAD TLEs', color="xkcd:azure")
+    axs[1, 0].hist(oneweb_sup_flat, bins=30, weights=ow_sup_weights, alpha=0.5, label='SUP TLEs', color="xkcd:blue")
+    axs[1, 0].set_ylim(0, 0.3)
+
+    axs[0, 1].hist(starlink_gp_flat, bins=30, weights=sl_norad_weights, alpha=0.5, label='NORAD TLEs', color="xkcd:orange")
+    axs[0, 1].hist(starlink_sup_flat, bins=30, weights=sl_sup_weights, alpha=0.5, label='SUP TLEs', color="xkcd:coral")
+    axs[0, 1].set_ylim(0.7, 0.8)
+
+    axs[1, 1].hist(starlink_gp_flat, bins=30, weights=sl_norad_weights, alpha=0.5, label='NORAD TLEs', color="xkcd:orange")
+    axs[1, 1].hist(starlink_sup_flat, bins=30, weights=sl_sup_weights, alpha=0.5, label='SUP TLEs', color="xkcd:coral")
+    axs[1, 1].set_ylim(0, 0.3)
+
+        # Additional plot styling
+    for ax in axs.flat:
+        ax.set_xlim(-1, 361)
+        ax.set_xticks(np.arange(-1, 361, 30))
+        ax.grid()
+        
+    for ax in axs[1,:]:
+        ax.set_xlabel('Argument of Latitude (deg)')
+        ax.set_ylabel('')
+        
+    for ax in axs[:,0]:
+        ax.set_ylabel('Proportion of TLEs')
+    
+    #top left subplot should have a blank y label
+    axs[0,0].set_ylabel('')
+        
+    axs[0,0].legend(loc='upper right', title='OneWeb')
+    axs[0,1].legend(loc='upper right', title='Starlink')
+
+    # Removing xticklabels for the upper plots
+    for ax in axs[0, :]:
+        ax.set_xticklabels([])
+
+    # Removing yticklabels for the second column plots
+    for ax in axs[:, 1]:
+        ax.set_yticklabels([])
+
+    plt.tight_layout()
+    plt.savefig('output/plots/TLE_production/tle_arglat_hist.png', dpi=300, bbox_inches='tight')
+    if show: 
+        plt.show()
 
 if __name__ == "__main__":
     pass
