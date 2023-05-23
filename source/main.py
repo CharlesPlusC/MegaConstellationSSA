@@ -59,6 +59,7 @@ def main ():
     # Plot the difference between the NORAD and SUP TLEs projected onto the ground track
     # plot_map_diffs_smallvals_all(all_dfs, show=False, criteria=1) #errors within 1 SD from the mean
     # TLE_arglat_dict()
+    
     benchmark_plot()
 
 if __name__ == "__main__":
