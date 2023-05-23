@@ -8,14 +8,17 @@ from matplotlib.patches import Patch
 import matplotlib.patches as mpatches
 import matplotlib as mpl
 from mpl_toolkits.basemap import Basemap
+import matplotlib.gridspec as gridspec
 import json
 from scipy import signal
 from typing import Dict, List, Union
 from collections import defaultdict
+from brokenaxes import brokenaxes
 
 
 #local imports
-from .analysis_tools import compute_fft
+from .conversions import jd_to_mjd
+from .analysis_tools import TLE_arglat_dict, compute_fft, sup_gp_op_benchmark
 
 # Set the default font size for the plots
 mpl.rcParams['font.size'] = 11
@@ -349,27 +352,39 @@ def plot_diff_hist(sats_dataframe_list: List[pd.DataFrame],
     else:
         diff_types = subplot_info.keys()
 
+    legend_handles = []
+    legend_labels = []
+
     for diff in diff_types:
         ax, xlabel, ylabel, xlims = subplot_info[diff]
         data_dict = {df['constellation'].iloc[0]: df[diff] for df in sats_dataframe_list}
 
-        text_y_offset = 0.15
-        text_y = 0.95
+        text_x_offset = 0.65  # Adjust the offset to move the text to the bottom right
+        text_x = 0.95  # Start the text from the right edge
+        text_y = 0.95  # Start the text from the top edge
+        text_y_offset = 0.2  # Adjust the offset to spread the text in the y-direction
 
         for constellation, data in data_dict.items():
             # Generate histogram with automatic bins
-            n, bins, patches = ax.hist(data, bins='auto', alpha=0.5, label=constellation, range=xlims, color=constellation_colour_dict[constellation.lower()])
+            n, bins, patches = ax.hist(data, bins='auto', alpha=0.5, label=constellation,
+                                        range=xlims, color=constellation_colour_dict[constellation.lower()])
 
             # Calculate statistics
             mean, std = np.mean(data), np.std(data)
 
             # Add statistics to the plot as text
             stats_text = "\n".join([
-                f'Mean {constellation}: {mean:.2f}km',
-                f'Std {constellation}: {std:.2f}km'
+                f'μ {constellation}: {mean:.2f}km',
+                f'σ {constellation}: {std:.2f}km'
             ])
-            ax.text(0.05, text_y, stats_text, transform=ax.transAxes, verticalalignment='top', fontsize=10)
+            ax.text(text_x, text_y, stats_text, transform=ax.transAxes, horizontalalignment='right',
+                    verticalalignment='top', fontsize=8)
             text_y -= text_y_offset
+
+            if constellation not in legend_labels:
+                # Add only one legend entry per unique constellation
+                legend_handles.append(patches[0])  # Add the first patch from each histogram
+                legend_labels.append(constellation)
 
         ax.set_xlabel(xlabel)
         ax.set_ylabel(ylabel)
@@ -378,12 +393,16 @@ def plot_diff_hist(sats_dataframe_list: List[pd.DataFrame],
         ax.set_yscale('log')
         ax.set_ylim(bottom=1)  # set y lower limit to 1
         ax.set_xlim(xlims)  # set x limits
-        ax.legend()
 
-    plt.tight_layout()
-    plt.savefig('output/plots/histograms/'+diff+'_hist.png', dpi=300)
+    # Add a single legend with one entry per constellation
+    fig.legend(legend_handles, legend_labels, loc='center right')
+
+    plt.tight_layout(rect=(0, 0, 0.85, 1))  # Adjust the rect parameter to allocate space for the legend
+
+    plt.savefig('output/plots/histograms/all_diffs_hist.png', dpi=300)  # Save with a single filename for all differences
     if show:
         plt.show()
+
 
 def plot_launch_latlon_diffs(sats_dataframe_list: List[pd.DataFrame] = [], show=False, criteria=1):
     """
@@ -541,6 +560,14 @@ def plot_ground_tracks(list_of_dfs: List[pd.DataFrame] = [], show: bool = False)
         plt.show()
 
 def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int = 1, show: bool = False) -> None:
+    """Plot the differnces that are greater than "criteria" standard deviations from the mean for all the dataframes in list_of_dfs.
+    Plot them onto a geographical map (lat/lon) and save the figure to a file.
+
+    Args:
+        list_of_dfs (List[pd.DataFrame]): list of dataframes containing the data to be plotted
+        criteria (int, optional): Differences within this many standard deviations of the mean will be retained. Defaults to 1.
+        show (bool, optional): Whether to display the plot. If set to False will just save to the location specified. Defaults to False.
+    """
     
     for diff_type in diff_types:
 
@@ -570,8 +597,6 @@ def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int 
             # find the max and min values of the differences
             max_diff = mean_mean_diff + criteria*mean_std_diff
             min_diff = mean_mean_diff - criteria*mean_std_diff
-
-            print("constellation: ", constellationname)
 
             # make a new dataframe with only the values of diff_type that are within plus or minus `criteria` standard deviations of the mean
             criteria_df_list = []
@@ -622,6 +647,235 @@ def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int 
                 plt.show()
             plt.close()  # close the plot after saving to avoid overlapping
 
+
+# def extract_norad_ids(gp_list):
+#     return [gp_path[-9:-4] for gp_path in gp_list]
+
+# def configure_plot_attributes(axis, color, time, value, line_style, line_width):
+#     for index in range(len(time)):
+#         axis.axvline(x=time[index], color=color, linestyle=line_style, linewidth=line_width)
+
+# def configure_subplot(axis, color, title, time, value, y_label, sup_time, gp_time):
+#     axis.plot(time, value, label='GP', color=color)
+#     axis.grid(True)
+#     configure_plot_attributes(axis, color, sup_time, value, 'dotted', 2)
+#     configure_plot_attributes(axis, color, gp_time, value, 'dotted', 2)
+
+def benchmark_plot():
+    all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list = sup_gp_op_benchmark()
+    # slice all_triple_ephems so as to be left with the first 7/8rds of the data in each dataframe
+    for i in range(len(all_triple_ephems)):
+        all_triple_ephems[i] = all_triple_ephems[i][:int(len(all_triple_ephems[i])*(7/8))]
+
+    #convert all_sup_tle_epochs and all_gp_tle_epochs to mjd_time
+    for i in range(len(all_sup_tle_epochs)):
+        all_sup_tle_epochs[i] = [i - 2400000.5 for i in all_sup_tle_epochs[i]]
+
+    for i in range(len(all_gp_tle_epochs)):
+        all_gp_tle_epochs[i] = [i - 2400000.5 for i in all_gp_tle_epochs[i]]
+
+    for i in range(len(all_triple_ephems)):
+        print(len(all_triple_ephems[i]))
+        #assert they are all the same length
+        # assert len(all_triple_ephems[i]) == len(all_sup_tle_epochs[i]) == len(all_gp_tle_epochs[i])
+
+    #get a list of NORAD IDs from the GP ephemeris files
+    NORAD_IDs = []
+    for gp_path in gp_list:
+        NORAD_IDs.append(gp_path[-9:-4])
+
+    ### Plot all the data in all_triple_ephems (4 subplot plots per NORAD dataset so 4*len(all_triple_ephems) plots total)
+    fig, ax = plt.subplots(4, len(all_triple_ephems), figsize=(4*len(all_triple_ephems), 6))
+
+    GP_colour = 'xkcd:blue'
+    SUP_colour = 'xkcd:coral'
+
+    fonts = 12
+    for i in range(len(all_triple_ephems)):
+        # for each NORAD ID plot h, c, l, and 3D position differences against jd_time for both GP and SUP
+        #only include y-axis labels for the first plot
+        if i == 0:
+            ax[0, i].set_ylabel(r'$\Delta$ H (km)', fontsize=fonts)
+        # else remove the tick labels
+        else:
+            ax[0, i].set_yticklabels([])
+        ax[0, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['gp_h_diff'].values, label='GP', color=GP_colour)
+        ax[0, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['sup_h_diff'].values, label='SUP', color=SUP_colour)
+        # add vertical dotted thin lines for each element in the list all_sup_tle_epochs[i]
+        for j in range(len(all_sup_tle_epochs[i])):
+            ax[0, i].axvline(x=all_sup_tle_epochs[i][j], color=SUP_colour, linestyle='dotted', linewidth=2)
+        # same for GP
+        for j in range(len(all_gp_tle_epochs[i])):
+            ax[0, i].axvline(x=all_gp_tle_epochs[i][j], color=GP_colour, linestyle='dotted', linewidth=2)
+        ax[0, i].grid(True)
+        #remove x-axis labels
+        ax[0, i].set_xticklabels([])
+        ax[0, i].set_title('NORAD ID: ' + NORAD_IDs[i], fontsize=fonts)
+        # for the y labels to be from -0.25 to 0.25
+        ax[0, i].set_ylim(-0.5, 0.5)
+        # set x-axis limits to be the max and min of the mjd_time column
+        ax[0, i].set_xlim(min(all_triple_ephems[i]['mjd_time']), max(all_triple_ephems[i]['mjd_time']))
+
+        if i == 0:
+            ax[1, i].set_ylabel(r'$\Delta$ C (km)', fontsize=fonts)
+        # else remove the tick labels
+        else:
+            ax[1, i].set_yticklabels([])
+        ax[1, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['gp_c_diff'].values, label='GP', color=GP_colour)
+        ax[1, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['sup_c_diff'].values, label='SUP', color=SUP_colour)
+        # add vertical dotted thin lines for each element in the list all_sup_tle_epochs[i]
+        for j in range(len(all_sup_tle_epochs[i])):
+            ax[1, i].axvline(x=all_sup_tle_epochs[i][j], color=SUP_colour, linestyle='dotted', linewidth=2)
+        # same for GP
+        for j in range(len(all_gp_tle_epochs[i])):
+            ax[1, i].axvline(x=all_gp_tle_epochs[i][j], color=GP_colour, linestyle='dotted', linewidth=2)
+        ax[1, i].set_xticklabels([])
+        ax[1, i].grid(True)
+        # set x-axis limits to be the max and min of the mjd_time column
+        ax[1, i].set_xlim(min(all_triple_ephems[i]['mjd_time']), max(all_triple_ephems[i]['mjd_time']))
+        # for the y labels to be from -0.6 to 0.6
+        # ax[1, i].set_ylim(-0.5, 0.5)
+
+        if i == 0:
+            ax[2, i].set_ylabel(r'$\Delta$ L (km)', fontsize=fonts)
+        # else remove the tick labels
+        else:
+            ax[2, i].set_yticklabels([])
+        ax[2, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['gp_l_diff'].values, label='GP', color=GP_colour)
+        ax[2, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['sup_l_diff'].values, label='SUP', color=SUP_colour)
+        # add vertical dotted thin lines for each element in the list all_sup_tle_epochs[i]
+        for j in range(len(all_sup_tle_epochs[i])):
+            ax[2, i].axvline(x=all_sup_tle_epochs[i][j], color=SUP_colour, linestyle='dotted', linewidth=2)
+        # same for GP
+        for j in range(len(all_gp_tle_epochs[i])):
+            ax[2, i].axvline(x=all_gp_tle_epochs[i][j], color=GP_colour, linestyle='dotted', linewidth=2)
+        ax[2, i].set_xticklabels([])
+        ax[2, i].grid(True)
+        ax[2, i].set_ylim(-5, 5)
+        # set x-axis limits to be the max and min of the mjd_time column
+        ax[2, i].set_xlim(min(all_triple_ephems[i]['mjd_time']), max(all_triple_ephems[i]['mjd_time']))
+
+        if i == 0:
+            ax[3, i].set_ylabel(r'$\Delta$ 3D (km)', fontsize=fonts)
+        # else remove the tick labels
+        else:
+            ax[3, i].set_yticklabels([])
+        ax[3, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['gp_cart_pos_diff'].values, label='GP', color=GP_colour)
+        ax[3, i].plot(all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['sup_cart_pos_diff'].values, label='SUP', color=SUP_colour)
+        # add vertical dotted thin lines for each element in the list all_sup_tle_epochs[i]
+        for j in range(len(all_sup_tle_epochs[i])):
+            ax[3, i].axvline(x=all_sup_tle_epochs[i][j], color=SUP_colour, linestyle='dotted', linewidth=2)
+        # same for GP
+        for j in range(len(all_gp_tle_epochs[i])):
+            ax[3, i].axvline(x=all_gp_tle_epochs[i][j], color=GP_colour, linestyle='dotted', linewidth=2)
+        # calculate the RMS of the differences
+        gp_rms = np.sqrt(np.mean(np.square(all_triple_ephems[i]['gp_cart_pos_diff'])))
+        sup_rms = np.sqrt(np.mean(np.square(all_triple_ephems[i]['sup_cart_pos_diff'])))
+        gp_mean = np.mean(all_triple_ephems[i]['gp_cart_pos_diff'])
+        sup_mean = np.mean(all_triple_ephems[i]['sup_cart_pos_diff'])
+        # add a little text box with the RMS values
+        textstr = 'GP mean: ' + str(round(gp_mean, 2)) + ' km \n SUP mean: ' + str(round(sup_mean, 2)) + ' km'
+        # props = dict(boxstyle='round', facecolor='white', alpha=0.5)
+        # ax[3, i].text(0.45, 0.9, textstr, transform=ax[3, i].transAxes, fontsize=fonts, verticalalignment='top', bbox=props)
+        ax[3, i].set_title(textstr, fontsize=fonts)
+        ax[3, i].grid(True)
+        ax[3, i].set_ylim(0, 5)
+        # set ticks every 2.5 on the y axis
+        ax[3, i].yaxis.set_ticks(np.arange(0, 5.1, 2.5))
+        # set x-axis limits to be the max and min of the mjd_time column
+        ax[3, i].set_xlim(min(all_triple_ephems[i]['mjd_time']), max(all_triple_ephems[i]['mjd_time']))
+        # include a common x label for the bottom row make it not scientific notation
+        ax[3, i].set_xlabel('MJD Time', fontsize=fonts)
+        ax[3, i].ticklabel_format(style='plain', axis='x', scilimits=(0,0)) 
+
+    # include one legend for the whole figure but only for the lines in the first plot
+    handles, labels = ax[0, 0].get_legend_handles_labels()
+    fig.legend(handles, labels, loc='center right', ncol=1, fontsize=fonts)
+
+    plt.tight_layout()
+    plt.savefig('output/plots/benchmark/SUPvsGPvsOp_06022023.png', dpi=300)
+
+    plt.show()
+
+def plot_arglat_analysis(show=False):
+    GP_arglats = TLE_arglat_dict(selected_satellites='external/selected_satellites.json', tle_folder = 'external/NORAD_TLEs/')
+    SUP_arglats = TLE_arglat_dict(selected_satellites='external/selected_satellites.json', tle_folder = 'external/SUP_TLEs/')
+
+    # Flatten list of lists
+    oneweb_gp = [value for key, value in GP_arglats["oneweb"].items()]
+    oneweb_gp_flat = [arglat for sublist in oneweb_gp for arglat in sublist]
+    
+    starlink_gp = [value for key, value in GP_arglats["starlink"].items()]
+    starlink_gp_flat = [arglat for sublist in starlink_gp for arglat in sublist]
+    
+    oneweb_sup = [value for key, value in SUP_arglats["oneweb"].items()]
+    oneweb_sup_flat = [arglat for sublist in oneweb_sup for arglat in sublist]
+    
+    starlink_sup = [value for key, value in SUP_arglats["starlink"].items()]
+    starlink_sup_flat = [arglat for sublist in starlink_sup for arglat in sublist]
+
+    # Calculate the total number of data points in each list
+    ow_norad_total = len(oneweb_gp_flat)
+    ow_sup_total = len(oneweb_sup_flat)
+    sl_norad_total = len(starlink_gp_flat)
+    sl_sup_total = len(starlink_sup_flat)
+
+    # Create weights for each dataset to normalize the histogram counts
+    ow_norad_weights = np.ones_like(oneweb_gp_flat) / ow_norad_total
+    ow_sup_weights = np.ones_like(oneweb_sup_flat) / ow_sup_total
+    sl_norad_weights = np.ones_like(starlink_gp_flat) / sl_norad_total
+    sl_sup_weights = np.ones_like(starlink_sup_flat) / sl_sup_total
+
+    fig, axs = plt.subplots(2, 2, figsize=(8, 5), sharex='col', sharey='none', 
+                            gridspec_kw={'height_ratios': [1, 3], 'wspace': 0.05, 'hspace': 0.15})
+
+    axs[0, 0].hist(oneweb_gp_flat, bins=30, weights=ow_norad_weights, alpha=0.5, label='NORAD TLEs', color="xkcd:azure")
+    axs[0, 0].hist(oneweb_sup_flat, bins=30, weights=ow_sup_weights, alpha=0.5, label='SUP TLEs', color="xkcd:blue")
+    axs[0, 0].set_ylim(0.7, 0.8)
+
+    axs[1, 0].hist(oneweb_gp_flat, bins=30, weights=ow_norad_weights, alpha=0.5, label='NORAD TLEs', color="xkcd:azure")
+    axs[1, 0].hist(oneweb_sup_flat, bins=30, weights=ow_sup_weights, alpha=0.5, label='SUP TLEs', color="xkcd:blue")
+    axs[1, 0].set_ylim(0, 0.3)
+
+    axs[0, 1].hist(starlink_gp_flat, bins=30, weights=sl_norad_weights, alpha=0.5, label='NORAD TLEs', color="xkcd:orange")
+    axs[0, 1].hist(starlink_sup_flat, bins=30, weights=sl_sup_weights, alpha=0.5, label='SUP TLEs', color="xkcd:coral")
+    axs[0, 1].set_ylim(0.7, 0.8)
+
+    axs[1, 1].hist(starlink_gp_flat, bins=30, weights=sl_norad_weights, alpha=0.5, label='NORAD TLEs', color="xkcd:orange")
+    axs[1, 1].hist(starlink_sup_flat, bins=30, weights=sl_sup_weights, alpha=0.5, label='SUP TLEs', color="xkcd:coral")
+    axs[1, 1].set_ylim(0, 0.3)
+
+        # Additional plot styling
+    for ax in axs.flat:
+        ax.set_xlim(-1, 361)
+        ax.set_xticks(np.arange(-1, 361, 30))
+        ax.grid()
+        
+    for ax in axs[1,:]:
+        ax.set_xlabel('Argument of Latitude (deg)')
+        ax.set_ylabel('')
+        
+    for ax in axs[:,0]:
+        ax.set_ylabel('Proportion of TLEs')
+    
+    #top left subplot should have a blank y label
+    axs[0,0].set_ylabel('')
+        
+    axs[0,0].legend(loc='upper right', title='OneWeb')
+    axs[0,1].legend(loc='upper right', title='Starlink')
+
+    # Removing xticklabels for the upper plots
+    for ax in axs[0, :]:
+        ax.set_xticklabels([])
+
+    # Removing yticklabels for the second column plots
+    for ax in axs[:, 1]:
+        ax.set_yticklabels([])
+
+    plt.tight_layout()
+    plt.savefig('output/plots/TLE_production/tle_arglat_hist.png', dpi=300, bbox_inches='tight')
+    if show: 
+        plt.show()
 
 if __name__ == "__main__":
     pass

@@ -11,9 +11,11 @@ import requests
 import numpy as np
 from sgp4.api import Satrec
 import datetime
+from astropy.time import Time
+import pandas as pd
 
 #local imports
-from .conversions import kep2car
+from .conversions import kep2car, parse_spacex_datetime_stamps, yyyy_mm_dd_hh_mm_ss_to_jd
 
 class MyError(Exception):
     def __init___(self, args):
@@ -245,6 +247,48 @@ def tle_convert(tle_dict):
     keplerian_dict = {'a': a, 'e': e, 'i': inclination, 'RAAN': RAAN, 'arg_p': arg_p, 'true_anomaly': np.degrees(true_anomaly)}
     return keplerian_dict
 
+def twoLE_parse(tle_2le):
+
+    """
+    Parses a 2LE string (e.g. as provided by Celestrak) and returns all the data in a dictionary.
+    Args:
+        tle_2le (string): 2LE string to be parsed
+    Returns:
+        2le_dict (dict): dictionary of all the data contained in the TLE string
+    """
+
+    # This function takes a TLE string and returns a dictionary of the TLE data
+    tle_lines = tle_2le.split('\n')
+    tle_dict = {}
+    line_one, line_two = tle_lines[0],tle_lines[1]
+    
+    #Parse the first line
+    tle_dict['line number'] = line_one[0]
+    tle_dict['satellite catalog number'] = line_one[2:7]
+    tle_dict['classification'] = line_one[7]
+    tle_dict['International Designator(launch year)'] = line_one[9:11] 
+    tle_dict['International Designator (launch num)'] = line_one[11:14]
+    tle_dict['International Designator (piece of launch)'] = line_one[14:17]
+    tle_dict['epoch year'] = line_one[18:20]
+    tle_dict['epoch day'] = line_one[20:32]
+    tle_dict['first time derivative of mean motion(ballisitc coefficient)'] = line_one[33:43]
+    tle_dict['second time derivative of mean motion(delta-dot)'] = line_one[44:52]
+    tle_dict['bstar drag term'] = line_one[53:61]
+    tle_dict['ephemeris type'] = line_one[62]
+    tle_dict['element number'] = line_one[63:68]
+    tle_dict['checksum'] = line_one[68:69]
+
+    #Parse the second line (ignore the line number, satellite catalog number, and checksum)
+    tle_dict['inclination'] = line_two[8:16]
+    tle_dict['right ascension of the ascending node'] = line_two[17:25]
+    tle_dict['eccentricity'] = line_two[26:33]
+    tle_dict['argument of perigee'] = line_two[34:42]
+    tle_dict['mean anomaly'] = line_two[43:51]
+    tle_dict['mean motion'] = line_two[52:63]
+    tle_dict['revolution number at epoch'] = line_two[63:68]
+
+    return tle_dict
+
 def download_tle_history(NORAD_ids, constellation, folder_path="external/NORAD_TLEs"):
     """
     This function takes a list of NORAD IDs and returns a dictionary of all available TLEs for each satellite. 
@@ -440,6 +484,8 @@ def combine_TLE2eph(TLE_list, jd_start, jd_stop, dt=(15 * 60)):
     current_tle_idx = 0
 
     while current_jd < jd_stop:
+        found_tle = False  # Flag to track if a matching TLE is found
+
         for i in range(current_tle_idx, len(TLE_list)):
             TLE_jd = TLE_time(TLE_list[i])
             next_TLE_jd = TLE_time(TLE_list[i + 1]) if i < len(TLE_list) - 1 else TLE_time(TLE_list[0])
@@ -451,9 +497,64 @@ def combine_TLE2eph(TLE_list, jd_start, jd_stop, dt=(15 * 60)):
                 hours_orbit_age = (current_jd - TLE_jd) * 24
                 orbit_ages.append(hours_orbit_age)
                 current_tle_idx = i  # Update the TLE index
+                found_tle = True
                 break
+
+        if not found_tle:
+            break  # Break out of the outer loop if no matching TLE is found
 
     ephemeris = ephemeris[:n_steps]
     orbit_ages = orbit_ages[:n_steps]
 
     return ephemeris, orbit_ages
+
+def read_spacex_ephemeris(ephem_path):
+    # read the first 5 lines of the operator ephem file
+    with open(ephem_path) as f:
+        ephem_lines = f.readlines()
+    ephem_lines = ephem_lines[:5]
+    ephem_utc_start = str(ephem_lines[1][16:16+19]) # start time
+    ephem_utc_end = str(ephem_lines[1][55:55+19]) # end time
+    ephem_step_size = int(ephem_lines[1][89:89+2]) # step size
+    #convert to datetime object
+    ephem_utc_dt_obj_start = datetime.datetime.strptime(ephem_utc_start, '%Y-%m-%d %H:%M:%S')
+    ephem_utc_dt_obj_end = datetime.datetime.strptime(ephem_utc_end, '%Y-%m-%d %H:%M:%S')
+    # convert to julian date
+    ephem_start_jd_dt_obj = Time(ephem_utc_dt_obj_start).jd
+    ephem_end_jd_dt_obj = Time(ephem_utc_dt_obj_end).jd
+
+    return ephem_start_jd_dt_obj, ephem_end_jd_dt_obj, ephem_step_size
+
+def spacex_ephem_to_dataframe(ephem_path):
+    # read in the text file 
+    with open(ephem_path) as f:
+        lines = f.readlines()
+    # remove the header lines
+    lines = lines[4:]
+    # select every 4th line
+    t_xyz_uvw = lines[::4]
+    # from all the lines in t_xyz_uvw select the first float in each line and append that to a list
+    t = [float(i.split()[0]) for i in t_xyz_uvw]
+    x = [float(i.split()[1]) for i in t_xyz_uvw]
+    y = [float(i.split()[2]) for i in t_xyz_uvw]
+    z = [float(i.split()[3]) for i in t_xyz_uvw]
+    u = [float(i.split()[4]) for i in t_xyz_uvw]
+    v = [float(i.split()[5]) for i in t_xyz_uvw]
+    w = [float(i.split()[6]) for i in t_xyz_uvw]
+    
+    # make all the values in the list 't' into a numpy array
+    tstamp_array = np.array(t)
+    # parse the timestamps into year, day of year, hour, minute, and second
+    parsed_tstamps = parse_spacex_datetime_stamps(tstamp_array)
+    # convert the parsed timestamps into julian dates
+    jd_stamps = np.zeros(len(parsed_tstamps))
+    for i in range(0, len(parsed_tstamps), 1):
+        jd_stamps[i] = yyyy_mm_dd_hh_mm_ss_to_jd(int(parsed_tstamps[i][0]), int(parsed_tstamps[i][1]), int(parsed_tstamps[i][2]), int(parsed_tstamps[i][3]), int(parsed_tstamps[i][4]), int(parsed_tstamps[i][5]), int(parsed_tstamps[i][6]))
+
+    # take t, x, y, z, u, v, w and put them into a dataframe
+    spacex_ephem_df = pd.DataFrame({'jd_time':jd_stamps, 'x':x, 'y':y, 'z':z, 'u':u, 'v':v, 'w':w})
+    # use the function meme_2_teme() to convert the x, y, z, u, v, w values from the MEME frame to the TEME frame
+    # remove the last row from spacex_ephem_df
+    spacex_ephem_df = spacex_ephem_df[:-1]
+
+    return spacex_ephem_df

@@ -4,11 +4,13 @@ Time and coordinate conversions
 import numpy as np
 import warnings
 from astropy import units as u
+import astropy.units as units
 from astropy.time import Time
 from poliastro.bodies import Earth
 from poliastro.twobody import Orbit
+from poliastro.frames import Planes
 import datetime
-from astropy.coordinates import GCRS, ITRS, CartesianRepresentation, CartesianDifferential
+from astropy.coordinates import GCRS, ITRS, CartesianRepresentation, CartesianDifferential, SkyCoord, GCRS, CIRS, TEME, TETE, ITRS, ICRS
 from pyproj import Transformer
 from typing import List, Tuple
 
@@ -36,6 +38,58 @@ def kep2car(a, e, i, w, W, V):
     vx, vy, vz = vel_vec
 
     return x, y, z, vx, vy, vz
+
+def car2kep(x, y, z, u, v, w, deg=False, arg_l=False):
+    """Convert cartesian to keplerian elements.
+
+    Args:
+        x (float): x position in km
+        y (float): y position in km
+        z (float): z position in km
+        u (float): x velocity in km/s
+        v (float): y velocity in km/s
+        w (float): z velocity in km/s
+        deg (bool, optional): If True, return angles in degrees. If False, return angles in radians. Defaults to False.
+        arg_l (bool, optional): If True, return argument of latitude in degrees. If False, do not return argument of latitude. Defaults to False.
+
+    Returns:
+        tuple: a, e, i, w, W, V, arg_lat (only if arg_l is True)
+    """
+    #make the vectors in as astropy Quantity objects
+    r = [x, y, z] * units.km
+    v = [u, v, w] * units.km / units.s
+
+    #convert to cartesian
+    orb = Orbit.from_vectors(Earth, r, v, plane=Planes.EARTH_EQUATOR)
+
+    #convert to keplerian
+    if deg == True:
+
+        a = orb.a.value
+        e = orb.ecc.value
+        i = np.rad2deg(orb.inc.value)
+        w = np.rad2deg(orb.raan.value)
+        W = np.rad2deg(orb.argp.value)
+        V = np.rad2deg(orb.nu.value)
+
+    elif deg == False:
+        a = orb.a.value
+        e = orb.ecc.value
+        i = orb.inc.value
+        w = orb.raan.value
+        W = orb.argp.value
+        V = orb.nu.value
+
+    if arg_l == True:
+        if deg == True:
+            arg_lat = (W + V) % 360
+        else:
+            arg_lat = (W + V) % (2*np.pi)
+        
+        return a, e, i, w, W, V, arg_lat
+
+    else:
+        return a, e, i, w, W, V
 
 def eci2ecef_astropy(eci_pos, eci_vel, mjd):
     # Convert MJD to isot format for Astropy
@@ -280,3 +334,65 @@ def eci2latlon(eci_positions: List[List[float]], eci_velocities: List[List[float
     lons = lla_coords[1]
 
     return lats, lons
+
+def doy_to_dom_month(year, doy):
+    d = datetime.datetime(year, 1, 1) + datetime.timedelta(doy - 1)
+    day_of_month = d.day
+    month = d.month
+    return day_of_month, month
+
+def jd_to_mjd(value_list):
+    return [value - 2400000.5 for value in value_list]
+
+def parse_spacex_datetime_stamps(timestamps):
+    """Parse SpaceX ephemeris datetime stamps into year, day of year, hour, minute, second."""
+    
+    # make an array where we will store the year, day of year, hour, minute, and second for each timestamp
+    parsed_tstamps = np.zeros((len(timestamps), 7))
+    
+    for i in range(0, len(timestamps), 1):
+        tstamp_str = str(timestamps[i])
+        # year is first 4 digits
+        year = tstamp_str[0:4]
+        # day of year is next 3 digits
+        dayofyear = tstamp_str[4:7]
+        #convert day of year to day of month and month number
+        day_of_month, month = doy_to_dom_month(int(year), int(dayofyear))
+        # hour is next 2 digits
+        hour = tstamp_str[7:9]
+        # minute is next 2 digits
+        minute = tstamp_str[9:11]
+        # second is next 2 digits
+        second = tstamp_str[11:13]
+        # milisecond is next 3 digits
+        milisecond = tstamp_str[14:16]
+        # add the parsed timestamp to the array
+        parsed_tstamps[i] = ([int(year), int(month), int(day_of_month), int(hour), int(minute), int(second), int(milisecond)])
+
+    return parsed_tstamps
+
+def yyyy_mm_dd_hh_mm_ss_to_jd(year, month, day, hour, minute, second, milisecond):
+    """Convert year, month, day, hour, minute, second to datetime object and then to julian date."""
+    dt_obj = datetime.datetime(year, month, day, hour, minute, second, milisecond*1000)
+    jd = Time(dt_obj).jd
+    return jd
+
+def TEME_to_MEME(x, y, z, u, v, w, jd_time):
+    """ convert from the ECI frame used for the NORAD two-line elements: sometimes called true equator, mean equinox (TEME) although it does not use the conventional mean equinox to the mean equator and mean equinox (MEME i.e. GCRS) frame used by the spacex ephemeris.
+    """
+    # convert to astropy time object
+    astropy_time = Time(jd_time, format='jd')
+    # convert to astropy skycoord object
+    skycoord = SkyCoord(x, y, z, unit='km', representation_type='cartesian', frame=TEME(obstime=astropy_time))
+    # convert to GCRS frame
+    gcrs = skycoord.transform_to(GCRS(obstime=astropy_time))
+    # convert to cartesian coordinates
+    x, y, z = gcrs.cartesian.xyz.to(units.km)
+    # convert to astropy skycoord object
+    skycoord = SkyCoord(u, v, w, unit='km/s', representation_type='cartesian', frame=TEME(obstime=astropy_time))
+    # convert to GCRS frame
+    gcrs = skycoord.transform_to(GCRS(obstime=astropy_time))
+    # convert to cartesian coordinates
+    u, v, w = gcrs.cartesian.xyz.to(units.km/units.s)
+    
+    return x.value, y.value, z.value, u.value, v.value, w.value

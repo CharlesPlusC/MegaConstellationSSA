@@ -8,14 +8,14 @@ import numpy as np
 import datetime
 import json
 from multiprocessing import Pool
-from typing import List, Dict, Tuple
+from typing import List, Dict, Tuple, Optional
 from astropy.time import Time
 import scipy as sp
 import scipy.fftpack
 
 #local imports
-from .tletools import read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph, load_satellite_lists
-from .conversions import jd_to_utc, utc_jd_date, midnight_jd_date, HCL_diff, dist_3d, alt_series, ecef_to_lla, eci2ecef_astropy, eci2latlon
+from .tletools import twoLE_parse, read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph, load_satellite_lists, read_spacex_ephemeris, spacex_ephem_to_dataframe, tle_convert
+from .conversions import car2kep, kep2car, jd_to_utc, utc_jd_date, midnight_jd_date, HCL_diff, dist_3d, alt_series, ecef_to_lla, eci2ecef_astropy, eci2latlon, TEME_to_MEME, parse_spacex_datetime_stamps, yyyy_mm_dd_hh_mm_ss_to_jd
 
 rmse = lambda x: np.sqrt(np.mean(np.square(x)))
 
@@ -35,7 +35,6 @@ def master_sgp4_ephemeris(start_date, stop_date, master_TLE, update = True, dt =
         #convert the start and stop dates to jd time stamps (midnight on the day)
     jd_start = utc_jd_date(start_date[2], start_date[1], start_date[0], 0, 0, 0) #midnight on the start day
     jd_stop = utc_jd_date(stop_date[2], stop_date[1], stop_date[0], 0, 0, 0) #midnight on the stop day
-
 
     # Check the date of the first and last TLEs in each list
     # If the dates are outside the range of the start and stop dates set the start and stop dates to the first and last TLE dates
@@ -486,3 +485,220 @@ def compute_fft(df: pd.DataFrame, diff_type: str) -> Tuple[np.ndarray, np.ndarra
     im = fftfreqs >0
 
     return fftfreqs[im], 10 * np.log10(diff_psd[im])
+
+def find_files_sup_gp_op(folder_path = 'external/ephem_TLE_compare'):
+    """
+    This function returns a list of file paths for files in the given directory.
+    
+    Args:
+        folder_path (str): Path to the directory.
+    
+    Returns:
+        list: List of file paths.
+    """
+    sup_list, gp_list, ephem_list = [], [], []
+    for sc_folder in os.listdir(folder_path):
+        for file in os.listdir(os.path.join(folder_path, sc_folder)):
+            if file.startswith('sup'):
+                sup_list.append(os.path.join(folder_path, sc_folder, file))
+            elif file.startswith('gp'):
+                gp_list.append(os.path.join(folder_path, sc_folder, file))
+            elif file.startswith('MEME'):
+                ephem_list.append(os.path.join(folder_path, sc_folder, file))
+    return sup_list, gp_list, ephem_list
+
+def sup_gp_op_benchmark():
+    sup_list, gp_list, ephem_list = find_files_sup_gp_op()
+        
+#     # now going through each spacecraft
+    all_triple_ephems = [] # list of the combined ephemeris data for each spacecraft
+    all_sup_ages = [] # list of the ages of the suplemental TLEs
+    all_gp_ages = [] # list of the ages of the gp TLEs
+    all_sup_tle_epochs = [] # list of the epochs of the suplemental TLEs
+    all_gp_tle_epochs = [] # list of the epochs of the gp TLEs
+
+    for i in range(len(sup_list)):
+        #read the first 5 lines of the ephem file
+        sup_path = sup_list[i]
+        gp_path = gp_list[i]
+        ephem_path = ephem_list[i]
+
+        # read the first 5 lines of the operator ephem file
+        ephem_start_jd_dt_obj, ephem_end_jd_dt_obj, ephem_step_size = read_spacex_ephemeris(ephem_path)
+
+        gp_TLE_list = read_TLEs(gp_path)
+        sup_TLE_list = read_TLEs(sup_path)
+
+        sup_tle_epochs = [TLE_time(TLE) for TLE in sup_TLE_list]
+        all_sup_tle_epochs.append(sup_tle_epochs)
+
+        gp_tle_epochs = [TLE_time(TLE) for TLE in gp_TLE_list]
+        all_gp_tle_epochs.append(gp_tle_epochs)
+
+        # compare the start time of the three data sources
+        gp_start = TLE_time(gp_TLE_list[0])
+        sup_start = TLE_time(sup_TLE_list[0])
+        # if any of the TLE (sup or gp) start times are after the ephemeris start time, then return an error and end the loop
+        if gp_start > ephem_start_jd_dt_obj or sup_start > ephem_start_jd_dt_obj:
+            print('The start time of the TLE is after the start time of the ephemeris. Please provide a TLE that starts before the ephemeris start time.')
+            break
+            # this is because i cannot interpolate (using a propagator) the ephemeris, but i can interpolate the TLEs
+            # so I interpolate the TLEs to the ephemeris start time
+        # extract the start time of the ephemeris and set it as the start time (compare_start) for the combine_TLE2eph function
+        else:
+            compare_start = ephem_start_jd_dt_obj
+        # now compare the end date of all data sources (ephemeris, sup, gp)
+        gp_end = TLE_time(gp_TLE_list[-1])
+        sup_end = TLE_time(sup_TLE_list[-1])
+
+        # now make ephemerides using the GP and SUP TLEs
+        sup_eph, sup_ages = combine_TLE2eph(TLE_list=sup_TLE_list, jd_start=ephem_start_jd_dt_obj, jd_stop=ephem_end_jd_dt_obj, dt=ephem_step_size)
+        gp_eph, gp_ages = combine_TLE2eph(TLE_list=gp_TLE_list, jd_start=ephem_start_jd_dt_obj, jd_stop=ephem_end_jd_dt_obj, dt=ephem_step_size)
+        
+        # save the ages of the TLEs
+        all_sup_ages.append(sup_ages)
+        all_gp_ages.append(gp_ages)
+
+        # now make dataframe with a row for each time step and a columns for jd, x, y, z, u,v,w
+        sup_df = pd.DataFrame(columns = ['sup_jd', 'sup_x', 'sup_y', 'sup_z', 'sup_u', 'sup_v', 'sup_w'])
+        gp_df = pd.DataFrame(columns = ['gp_jd', 'gp_x', 'gp_y', 'gp_z', 'gp_u', 'gp_v', 'gp_w'])
+
+        # go through each row in sup_df and apply TEME_to_MEME to the x,y,z,u,v,w columns. Replace them inplace
+        for i in range(len(sup_eph)):
+            meme_x, meme_y, meme_z, meme_u, meme_v, meme_w = TEME_to_MEME(x = sup_eph[i][1][0], y = sup_eph[i][1][1], z = sup_eph[i][1][2], u = sup_eph[i][2][0], v = sup_eph[i][2][1], w = sup_eph[i][2][2], jd_time = sup_eph[i][0])
+            sup_df.loc[i] = [sup_eph[i][0], meme_x, meme_y, meme_z, meme_u, meme_v, meme_w]
+
+        for i in range(len(gp_eph)):
+            meme_x, meme_y, meme_z, meme_u, meme_v, meme_w = TEME_to_MEME(x = gp_eph[i][1][0], y = gp_eph[i][1][1], z = gp_eph[i][1][2], u = gp_eph[i][2][0], v = gp_eph[i][2][1], w = gp_eph[i][2][2], jd_time = gp_eph[i][0])
+            gp_df.loc[i] = [gp_eph[i][0], meme_x, meme_y, meme_z, meme_u, meme_v, meme_w]
+
+        #merge the two dataframes
+        sup_n_gp_df = pd.merge(sup_df, gp_df, left_on = 'sup_jd', right_on = 'gp_jd')
+
+        # read in the text file 
+        spacex_ephem_df = spacex_ephem_to_dataframe(ephem_path)
+
+        # merge the two dataframes (on index since the time stamps are off by around 8 seconds after 24 hours)
+        triple_ephem_df = pd.merge(sup_n_gp_df, spacex_ephem_df, left_index = True, right_index = True)
+
+        # now calculate the H, C, L, 3D diffs for each time step between the SUP/GP and SpaceX ephemerides
+        prefs = ['gp_', 'sup_']
+        for pref in prefs:
+            H_diffs = []
+            C_diffs = []
+            L_diffs = []
+            cart_pos_diffs = []
+            for i in range(len(triple_ephem_df)):
+                tle_r = np.array([triple_ephem_df[pref + 'x'][i], triple_ephem_df[pref + 'y'][i], triple_ephem_df[pref + 'z'][i]])
+                ephem_r = np.array([triple_ephem_df['x'][i], triple_ephem_df['y'][i], triple_ephem_df['z'][i]])
+
+                tle_v = np.array([triple_ephem_df[pref + 'u'][i], triple_ephem_df[pref + 'v'][i], triple_ephem_df[pref + 'w'][i]])
+                ephem_v = np.array([triple_ephem_df['u'][i], triple_ephem_df['v'][i], triple_ephem_df['w'][i]])
+
+                unit_radial = ephem_r/np.linalg.norm(ephem_r)
+                unit_cross_track = np.array(np.cross(ephem_r, ephem_v)/np.linalg.norm(np.cross(ephem_r, ephem_v)))
+                unit_along_track = np.cross(unit_radial, unit_cross_track)
+
+                unit_vectors = np.array([unit_radial, unit_cross_track, unit_along_track])
+
+                r_diff = tle_r - ephem_r
+
+                r_diff_HCL = np.matmul(unit_vectors, r_diff)
+
+                h_diff = r_diff_HCL[0]
+                c_diff = r_diff_HCL[1]
+                l_diff = r_diff_HCL[2]
+
+                cart_pos_diff = np.linalg.norm(tle_r - ephem_r)
+
+                H_diffs.append(h_diff)
+                C_diffs.append(c_diff)
+                L_diffs.append(l_diff)
+                cart_pos_diffs.append(cart_pos_diff)
+
+            triple_ephem_df[pref + 'h_diff'] = H_diffs
+            triple_ephem_df[pref + 'c_diff'] = C_diffs
+            triple_ephem_df[pref + 'l_diff'] = L_diffs
+            triple_ephem_df[pref + 'cart_pos_diff'] = cart_pos_diffs
+            # convert 'jd_time' to mjd_time for plotting
+            triple_ephem_df['mjd_time'] = triple_ephem_df['jd_time'] - 2400000.5
+
+        all_triple_ephems.append(triple_ephem_df)
+    return all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list
+
+def get_NORADS_from_JSON(selected_satellites='external/selected_satellites.json'):
+
+    # Open and load the JSON file as a Python dictionary
+    with open(selected_satellites, 'r') as f:
+        data = json.load(f)
+    
+    # Create an empty list to store the ID numbers
+    ids_list = []
+    
+    # Iterate over the constellations
+    for constellation in data.values():
+        # Iterate over the levels of each constellation
+        for level in constellation.values():
+            # Append the ID numbers to the list
+            ids_list.append(level)
+    
+    return ids_list
+
+def TLE_arglat_dict(selected_satellites: str='external/selected_satellites.json', tle_folder: str='external/NORAD_TLEs/') -> List[Dict[int, List[float]]]:
+    """
+    Generate a list of dictionaries containing argument of latitude values for each NORAD ID in each satellite constellation.
+
+    This function reads NORAD Two-Line Element (TLE) data for selected satellites from JSON and text files, parses and
+    converts the TLE data into Keplerian elements, calculates the argument of latitude in degrees for each TLE, and 
+    organizes this data into dictionaries.
+
+    Parameters
+    ----------
+    selected_satellites : str, optional
+        Path to the JSON file containing the selected satellites' NORAD IDs. 
+        Each entry in the JSON file should correspond to a constellation. Defaults to 'external/selected_satellites.json'.
+    tle_folder : str, optional
+        Path to the folder containing the TLE text files for each NORAD ID. Defaults to 'external/NORAD_TLEs/'.
+
+    Returns
+    -------
+    const_TLE_arglat_ls : list of dict of {int: list of float}
+        List of dictionaries, where each dictionary corresponds to a constellation. 
+        Each dictionary's keys are NORAD IDs, and the values are lists of argument of latitude values for each TLE.
+
+    Notes
+    -----
+    This function relies on the helper functions `read_TLEs`, `twoLE_parse`, and `tle_convert`,
+    which are responsible for reading the NORAD IDs from the JSON file, reading TLEs from the text files, parsing the TLEs,
+    and converting the TLEs to Keplerian elements, respectively.
+    """
+    with open(selected_satellites, 'r') as f:
+        data = json.load(f)
+
+    const_TLE_arglat_dict = {} #dictionary of dictionaries of TLE times per NORAD ID separated by constellation
+
+    for constellation, launches in data.items():
+        TLE_arglat_dict = {} 
+        for launch, NORAD_IDs in launches.items():
+            for NORAD in NORAD_IDs:
+                for i in os.listdir(tle_folder):
+                    #keep only the text files
+                    tle_file = tle_folder + i
+                    sc_TLE_arglats = [] #list of TLE times for each NORAD ID
+                    # get NORAD ID by getting the 5 digits before the '.txt' in the file name
+                    no_txt = i[:-4]
+                    #make a variable called file_NORAD that contains just the numbers from the string (no '.txt')
+                    file_NORAD = int(''.join(filter(str.isdigit, no_txt)))
+
+                    if file_NORAD == NORAD: # if the NORAD ID is part of the constellation we are looking at
+                        TLEs = read_TLEs(tle_file) #read the TLEs from the text file
+                        for i in range(len(TLEs)): #for each TLE
+                            tle_dict = twoLE_parse(TLEs[i]) #parse the TLE
+                            kep_elem = tle_convert(tle_dict)  #convert the TLE to Keplerian elements
+                            # argp is in radians, true_anomaly is in degrees
+                            argument_of_latitude = (kep_elem['arg_p'] + np.deg2rad(kep_elem['true_anomaly'])) % (2*np.pi) #calculate the argument of latitude
+                            arg_lat = argument_of_latitude * 180/np.pi #convert the argument of latitude to degrees
+                            sc_TLE_arglats.append(arg_lat) #append to the list of TLE arglats for that NORAD ID
+                        TLE_arglat_dict[NORAD] = sc_TLE_arglats #add the list of TLE arglats to the dictionary for that NORAD ID
+        const_TLE_arglat_dict[constellation] = TLE_arglat_dict #add the dictionary of NORAD IDs and TLE arglats to the dictionary for each constellation
+    return const_TLE_arglat_dict #return the dictionary of dictionaries for each constellation
