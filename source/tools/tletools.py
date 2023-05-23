@@ -247,6 +247,48 @@ def tle_convert(tle_dict):
     keplerian_dict = {'a': a, 'e': e, 'i': inclination, 'RAAN': RAAN, 'arg_p': arg_p, 'true_anomaly': np.degrees(true_anomaly)}
     return keplerian_dict
 
+def twoLE_parse(tle_2le):
+
+    """
+    Parses a 2LE string (e.g. as provided by Celestrak) and returns all the data in a dictionary.
+    Args:
+        tle_2le (string): 2LE string to be parsed
+    Returns:
+        2le_dict (dict): dictionary of all the data contained in the TLE string
+    """
+
+    # This function takes a TLE string and returns a dictionary of the TLE data
+    tle_lines = tle_2le.split('\n')
+    tle_dict = {}
+    line_one, line_two = tle_lines[0],tle_lines[1]
+    
+    #Parse the first line
+    tle_dict['line number'] = line_one[0]
+    tle_dict['satellite catalog number'] = line_one[2:7]
+    tle_dict['classification'] = line_one[7]
+    tle_dict['International Designator(launch year)'] = line_one[9:11] 
+    tle_dict['International Designator (launch num)'] = line_one[11:14]
+    tle_dict['International Designator (piece of launch)'] = line_one[14:17]
+    tle_dict['epoch year'] = line_one[18:20]
+    tle_dict['epoch day'] = line_one[20:32]
+    tle_dict['first time derivative of mean motion(ballisitc coefficient)'] = line_one[33:43]
+    tle_dict['second time derivative of mean motion(delta-dot)'] = line_one[44:52]
+    tle_dict['bstar drag term'] = line_one[53:61]
+    tle_dict['ephemeris type'] = line_one[62]
+    tle_dict['element number'] = line_one[63:68]
+    tle_dict['checksum'] = line_one[68:69]
+
+    #Parse the second line (ignore the line number, satellite catalog number, and checksum)
+    tle_dict['inclination'] = line_two[8:16]
+    tle_dict['right ascension of the ascending node'] = line_two[17:25]
+    tle_dict['eccentricity'] = line_two[26:33]
+    tle_dict['argument of perigee'] = line_two[34:42]
+    tle_dict['mean anomaly'] = line_two[43:51]
+    tle_dict['mean motion'] = line_two[52:63]
+    tle_dict['revolution number at epoch'] = line_two[63:68]
+
+    return tle_dict
+
 def download_tle_history(NORAD_ids, constellation, folder_path="external/NORAD_TLEs"):
     """
     This function takes a list of NORAD IDs and returns a dictionary of all available TLEs for each satellite. 

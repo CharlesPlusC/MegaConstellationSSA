@@ -8,6 +8,7 @@ import astropy.units as units
 from astropy.time import Time
 from poliastro.bodies import Earth
 from poliastro.twobody import Orbit
+from poliastro.frames import Planes
 import datetime
 from astropy.coordinates import GCRS, ITRS, CartesianRepresentation, CartesianDifferential, SkyCoord, GCRS, CIRS, TEME, TETE, ITRS, ICRS
 from pyproj import Transformer
@@ -37,6 +38,58 @@ def kep2car(a, e, i, w, W, V):
     vx, vy, vz = vel_vec
 
     return x, y, z, vx, vy, vz
+
+def car2kep(x, y, z, u, v, w, deg=False, arg_l=False):
+    """Convert cartesian to keplerian elements.
+
+    Args:
+        x (float): x position in km
+        y (float): y position in km
+        z (float): z position in km
+        u (float): x velocity in km/s
+        v (float): y velocity in km/s
+        w (float): z velocity in km/s
+        deg (bool, optional): If True, return angles in degrees. If False, return angles in radians. Defaults to False.
+        arg_l (bool, optional): If True, return argument of latitude in degrees. If False, do not return argument of latitude. Defaults to False.
+
+    Returns:
+        tuple: a, e, i, w, W, V, arg_lat (only if arg_l is True)
+    """
+    #make the vectors in as astropy Quantity objects
+    r = [x, y, z] * units.km
+    v = [u, v, w] * units.km / units.s
+
+    #convert to cartesian
+    orb = Orbit.from_vectors(Earth, r, v, plane=Planes.EARTH_EQUATOR)
+
+    #convert to keplerian
+    if deg == True:
+
+        a = orb.a.value
+        e = orb.ecc.value
+        i = np.rad2deg(orb.inc.value)
+        w = np.rad2deg(orb.raan.value)
+        W = np.rad2deg(orb.argp.value)
+        V = np.rad2deg(orb.nu.value)
+
+    elif deg == False:
+        a = orb.a.value
+        e = orb.ecc.value
+        i = orb.inc.value
+        w = orb.raan.value
+        W = orb.argp.value
+        V = orb.nu.value
+
+    if arg_l == True:
+        if deg == True:
+            arg_lat = (W + V) % 360
+        else:
+            arg_lat = (W + V) % (2*np.pi)
+        
+        return a, e, i, w, W, V, arg_lat
+
+    else:
+        return a, e, i, w, W, V
 
 def eci2ecef_astropy(eci_pos, eci_vel, mjd):
     # Convert MJD to isot format for Astropy

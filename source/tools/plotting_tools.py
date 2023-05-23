@@ -655,6 +655,7 @@ def benchmark_plot():
     # get benchmark data
     all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list = sup_gp_op_benchmark()
     # TODO: see if i can get all_sup_tle_epochs, all_gp_tle_epochs, gp_list from all_triple_ephems instead of passing giant lists around.
+    print(all_triple_ephems)
 
     # slice all_triple_ephems to be left with the first 7/8rds of the data in each dataframe
     all_triple_ephems = [ephem[:int(len(ephem)*(7/8))] for ephem in all_triple_ephems]
@@ -704,7 +705,7 @@ def benchmark_plot():
         else:
             ax[3, i].set_yticklabels([])
 
-        configure_subplot(ax[3, i], GP_colour, '', all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['gp_3d_diff'].values, r'$\Delta$ 3D (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
+        configure_subplot(ax[3, i], GP_colour, '', all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['gp_cart_pos_diff'].values, r'$\Delta$ 3D (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
 
 
     handles, labels = ax[0, 0].get_legend_handles_labels()
@@ -714,7 +715,6 @@ def benchmark_plot():
     plt.savefig('output/plots/benchmark/SUPvsGPvsOp_06022023.png', dpi=600)
 
     plt.show()
-
 
 # def benchmark_plot():
 #     all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list = sup_gp_op_benchmark()
