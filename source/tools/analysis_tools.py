@@ -645,32 +645,27 @@ def get_NORADS_from_JSON(selected_satellites='external/selected_satellites.json'
     return ids_list
 
 def TLE_arglat_dict(selected_satellites='external/selected_satellites.json', tle_folder = 'external/NORAD_TLEs'):
-
+    # calculate the argument of latitude for all the available NORAD IDs for all of the selected satellites
     loloNORAD = get_NORADS_from_JSON(selected_satellites) #list of list of NORAD IDS per constellation
-
-    print("loloNOARD", loloNORAD)
-
     const_TLE_arglat_ls = [] #list of dictionaries of TLE times per NORAD ID separated by constellation
     for const in loloNORAD:
         TLE_arglat_dict = {}
         for i in os.listdir(tle_folder):
             #keep only the text files
-            print("i", i)
-            tle_list = read_TLEs(i)
-            if i[-4:] == '.txt':
-                tle_file = tle_folder + i
-                sc_TLE_arglats = [] #list of TLE times for each NORAD ID
-                # get NORAD ID by getting the 5 digits before the '.txt' in the file name
-                no_txt = i[:-4]
-                NORAD = int(no_txt[-5:])
-                if NORAD in const:
-                    TLEs = read_TLEs(tle_file)
-                    for i in range(len(TLEs)):
-                        tle_dict = twoLE_parse(TLEs[i])
-                        kep_elem = tle_convert(tle_dict)
-                        x_car, y_car, z_car, u_car, v_car, w_car = kep2car(a = kep_elem['a'], e = kep_elem['e'], i = kep_elem['i'], w = kep_elem['RAAN'], W = kep_elem['arg_p'], V = kep_elem['true_anomaly'])
-                        a, e, i, w, W, V, arg_lat = car2kep(x_car, y_car, z_car, u_car, v_car, w_car, deg=True, arg_l=True)
-                        sc_TLE_arglats.append(arg_lat)
-                    TLE_arglat_dict[NORAD] = sc_TLE_arglats
-            const_TLE_arglat_ls.append(TLE_arglat_dict)
-    return const_TLE_arglat_ls
+            tle_file = tle_folder + i
+            sc_TLE_arglats = [] #list of TLE times for each NORAD ID
+            # get NORAD ID by getting the 5 digits before the '.txt' in the file name
+            no_txt = i[:-4]
+            #make a variable called NORAD that contains just the numbers from the string (no '.txt')
+            NORAD = int(''.join(filter(str.isdigit, no_txt)))
+            if NORAD in const: # if the NORAD ID is part of the constellation we are looking at
+                TLEs = read_TLEs(tle_file) #read the TLEs from the text file
+                for i in range(len(TLEs)): #for each TLE
+                    tle_dict = twoLE_parse(TLEs[i]) #parse the TLE
+                    kep_elem = tle_convert(tle_dict)  #convert the TLE to Keplerian elements
+                    argument_of_latitude = (kep_elem['arg_p'] + kep_elem['true_anomaly']) % (2*np.pi) # calcualte the argument of latitude in radians
+                    arg_lat = argument_of_latitude * 180/np.pi #convert to degrees
+                    sc_TLE_arglats.append(arg_lat) #append to the list of TLE arglats for that NORAD ID
+                TLE_arglat_dict[NORAD] = sc_TLE_arglats #add the list of TLE arglats to the dictionary for that NORAD ID
+        const_TLE_arglat_ls.append(TLE_arglat_dict) #add the dictionary of NORAD IDs and TLE arglats to the list of dictionaries for each constellation
+    return const_TLE_arglat_ls #return the list of dictionaries for each constellation

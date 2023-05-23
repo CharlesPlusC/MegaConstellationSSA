@@ -681,8 +681,13 @@ def benchmark_plot():
         else:
             ax[0, i].set_yticklabels([])
 
+        #plot GP data
         configure_subplot(ax[0, i], GP_colour, 'NORAD ID: ' + NORAD_IDs[i], all_triple_ephems[i]['mjd_time'].values,
                         all_triple_ephems[i]['gp_h_diff'].values, r'$\Delta$ H (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
+        #plot SUP data
+        configure_subplot(ax[0, i], SUP_colour, '', all_triple_ephems[i]['mjd_time'].values, 
+                          all_triple_ephems[i]['sup_h_diff'].values, r'$\Delta$ H (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
+
 
         if i == 0:
             ax[1, i].set_ylabel(r'$\Delta$ C (km)', fontsize=fonts)
@@ -691,6 +696,8 @@ def benchmark_plot():
 
         configure_subplot(ax[1, i], GP_colour, '', all_triple_ephems[i]['mjd_time'].values,
                         all_triple_ephems[i]['gp_c_diff'].values, r'$\Delta$ C (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
+        configure_subplot(ax[1, i], SUP_colour, '', all_triple_ephems[i]['mjd_time'].values, 
+                          all_triple_ephems[i]['sup_c_diff'].values, r'$\Delta$ H (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
 
         if i == 0:
             ax[2, i].set_ylabel(r'$\Delta$ L (km)', fontsize=fonts)
@@ -699,14 +706,18 @@ def benchmark_plot():
 
         configure_subplot(ax[2, i], GP_colour, '', all_triple_ephems[i]['mjd_time'].values,
                         all_triple_ephems[i]['gp_l_diff'].values, r'$\Delta$ L (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
+        configure_subplot(ax[2, i], SUP_colour, '', all_triple_ephems[i]['mjd_time'].values, 
+                          all_triple_ephems[i]['sup_l_diff'].values, r'$\Delta$ H (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
 
         if i == 0:
             ax[3, i].set_ylabel(r'$\Delta$ 3D (km)', fontsize=fonts)
         else:
             ax[3, i].set_yticklabels([])
 
-        configure_subplot(ax[3, i], GP_colour, '', all_triple_ephems[i]['mjd_time'].values, all_triple_ephems[i]['gp_cart_pos_diff'].values, r'$\Delta$ 3D (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
-
+        configure_subplot(ax[3, i], GP_colour, '', all_triple_ephems[i]['mjd_time'].values, 
+                          all_triple_ephems[i]['gp_cart_pos_diff'].values, r'$\Delta$ 3D (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
+        configure_subplot(ax[3, i], SUP_colour, '', all_triple_ephems[i]['mjd_time'].values, 
+                          all_triple_ephems[i]['sup_cart_pos_diff'].values, r'$\Delta$ H (km)', all_sup_tle_epochs[i], all_gp_tle_epochs[i])
 
     handles, labels = ax[0, 0].get_legend_handles_labels()
     fig.legend(handles, labels, loc='center right', ncol=1, fontsize=fonts)
