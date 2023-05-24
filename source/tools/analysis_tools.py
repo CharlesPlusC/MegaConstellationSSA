@@ -508,6 +508,9 @@ def find_files_sup_gp_op(folder_path = 'external/ephem_TLE_compare'):
     return sup_list, gp_list, ephem_list
 
 def sup_gp_op_benchmark():
+
+    # 57.3494% age difference between sup and gp TLEs against operator ephem
+
     sup_list, gp_list, ephem_list = find_files_sup_gp_op()
         
 #     # now going through each spacecraft
@@ -695,10 +698,15 @@ def TLE_arglat_dict(selected_satellites: str='external/selected_satellites.json'
                         for i in range(len(TLEs)): #for each TLE
                             tle_dict = twoLE_parse(TLEs[i]) #parse the TLE
                             kep_elem = tle_convert(tle_dict)  #convert the TLE to Keplerian elements
-                            # argp is in radians, true_anomaly is in degrees
+                            # argp is in radians, true_anomaly is in radians now
                             argument_of_latitude = (kep_elem['arg_p'] + np.deg2rad(kep_elem['true_anomaly'])) % (2*np.pi) #calculate the argument of latitude
-                            arg_lat = argument_of_latitude * 180/np.pi #convert the argument of latitude to degrees
+                            if argument_of_latitude > 2 * np.pi:
+                                print('arglat > 2pi:', argument_of_latitude)
+                            arg_lat = (argument_of_latitude * 180/np.pi) #convert the argument of latitude to degrees
                             sc_TLE_arglats.append(arg_lat) #append to the list of TLE arglats for that NORAD ID
                         TLE_arglat_dict[NORAD] = sc_TLE_arglats #add the list of TLE arglats to the dictionary for that NORAD ID
         const_TLE_arglat_dict[constellation] = TLE_arglat_dict #add the dictionary of NORAD IDs and TLE arglats to the dictionary for each constellation
     return const_TLE_arglat_dict #return the dictionary of dictionaries for each constellation
+
+
+

@@ -663,9 +663,9 @@ def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int 
 
 def benchmark_plot():
     all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list = sup_gp_op_benchmark()
-    # slice all_triple_ephems so as to be left with the first 7/8rds of the data in each dataframe
-    for i in range(len(all_triple_ephems)):
-        all_triple_ephems[i] = all_triple_ephems[i][:int(len(all_triple_ephems[i])*(7/8))]
+    # # slice all_triple_ephems so as to be left with the first 7/8rds of the data in each dataframe
+    # for i in range(len(all_triple_ephems)):
+    #     all_triple_ephems[i] = all_triple_ephems[i][:int(len(all_triple_ephems[i])*(7/8))]
 
     #convert all_sup_tle_epochs and all_gp_tle_epochs to mjd_time
     for i in range(len(all_sup_tle_epochs)):
@@ -751,7 +751,7 @@ def benchmark_plot():
             ax[2, i].axvline(x=all_gp_tle_epochs[i][j], color=GP_colour, linestyle='dotted', linewidth=2)
         ax[2, i].set_xticklabels([])
         ax[2, i].grid(True)
-        ax[2, i].set_ylim(-5, 5)
+        ax[2, i].set_ylim(-10, 10)
         # set x-axis limits to be the max and min of the mjd_time column
         ax[2, i].set_xlim(min(all_triple_ephems[i]['mjd_time']), max(all_triple_ephems[i]['mjd_time']))
 
@@ -779,9 +779,9 @@ def benchmark_plot():
         # ax[3, i].text(0.45, 0.9, textstr, transform=ax[3, i].transAxes, fontsize=fonts, verticalalignment='top', bbox=props)
         ax[3, i].set_title(textstr, fontsize=fonts)
         ax[3, i].grid(True)
-        ax[3, i].set_ylim(0, 5)
+        ax[3, i].set_ylim(0, 8)
         # set ticks every 2.5 on the y axis
-        ax[3, i].yaxis.set_ticks(np.arange(0, 5.1, 2.5))
+        ax[3, i].yaxis.set_ticks(np.arange(0, 10.1, 2.5))
         # set x-axis limits to be the max and min of the mjd_time column
         ax[3, i].set_xlim(min(all_triple_ephems[i]['mjd_time']), max(all_triple_ephems[i]['mjd_time']))
         # include a common x label for the bottom row make it not scientific notation
@@ -848,7 +848,9 @@ def plot_arglat_analysis(show=False):
         # Additional plot styling
     for ax in axs.flat:
         ax.set_xlim(-1, 361)
-        ax.set_xticks(np.arange(-1, 361, 30))
+        ax.set_xticks(np.arange(0, 361, 60))
+        # make the ticks diagonal so they don't overlap
+        ax.tick_params(axis='x', rotation=35)
         ax.grid()
         
     for ax in axs[1,:]:
@@ -864,9 +866,9 @@ def plot_arglat_analysis(show=False):
     axs[0,0].legend(loc='upper right', title='OneWeb')
     axs[0,1].legend(loc='upper right', title='Starlink')
 
-    # Removing xticklabels for the upper plots
-    for ax in axs[0, :]:
-        ax.set_xticklabels([])
+    # # Removing xticklabels for the upper plots
+    # for ax in axs[0, :]:
+    #     ax.set_xticklabels([])
 
     # Removing yticklabels for the second column plots
     for ax in axs[:, 1]:
