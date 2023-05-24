@@ -74,7 +74,7 @@ def main ():
 
 
 if __name__ == "__main__":
-    # main()
+    main()
     
 #   Unhash to run the profiler
-    cProfile.run('main()')
+    # cProfile.run('main()')

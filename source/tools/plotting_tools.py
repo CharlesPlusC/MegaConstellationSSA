@@ -781,7 +781,7 @@ def benchmark_plot():
         ax[3, i].grid(True)
         ax[3, i].set_ylim(0, 8)
         # set ticks every 2.5 on the y axis
-        ax[3, i].yaxis.set_ticks(np.arange(0, 10.1, 2.5))
+        ax[3, i].yaxis.set_ticks(np.arange(0, 8.1, 2))
         # set x-axis limits to be the max and min of the mjd_time column
         ax[3, i].set_xlim(min(all_triple_ephems[i]['mjd_time']), max(all_triple_ephems[i]['mjd_time']))
         # include a common x label for the bottom row make it not scientific notation
