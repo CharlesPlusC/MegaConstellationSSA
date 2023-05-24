@@ -708,5 +708,48 @@ def TLE_arglat_dict(selected_satellites: str='external/selected_satellites.json'
         const_TLE_arglat_dict[constellation] = TLE_arglat_dict #add the dictionary of NORAD IDs and TLE arglats to the dictionary for each constellation
     return const_TLE_arglat_dict #return the dictionary of dictionaries for each constellation
 
+def TLE_rate_dicts(selected_satellites: str='external/selected_satellites.json', tle_folder = 'external/NORAD_TLEs/'):
+    """Given a list of lists of NORAD IDs, populate a dictionary of TLE rate (hours/TLE) for each NORAD ID in each list.
 
+    Args:
+        const_norad_list (array-like): a list of lists of NORAD IDS. For example, [[NORAD_Oneweb1, NORAD_Oneweb2, NORAD_Oneweb3], [NORAD_Starlink1, NORAD_Starlink2, NORAD_Starlink3]].
+        tle_folder (str, optional): Path of folder containing text files with TLE lists. Defaults to 'external/NORAD_TLEs'.
 
+    Returns:
+        list: list of dictionaries of TLE rates (hours/TLE) per NORAD ID separated by constellation.
+    """
+
+    with open(selected_satellites) as file:
+        data = json.load(file)
+    
+    const_norad_list = []
+    for constellation in data.values():
+        norad_ids = []
+        for norad_list in constellation.values():
+            norad_ids.extend(norad_list)
+        const_norad_list.append(norad_ids)
+
+    const_tle_rates = [] # list of dictionaries of TLE rates per NORAD ID separated by constellation
+    
+    for const in const_norad_list:
+        TLE_tdiff_dict = {}
+        
+        for i in os.listdir(tle_folder):
+            if i[-4:] == '.txt':
+                tle_file = tle_folder + i
+                no_txt = i[:-4]
+                NORAD = int(no_txt[-5:])
+                
+                if NORAD in const:
+                    TLEs = read_TLEs(tle_file)
+                    sc_TLE_times = [TLE_time(TLEs[i]) for i in range(len(TLEs))]  # list of TLE times for each NORAD ID
+                    
+                    # Calculate time differences between consecutive TLE times
+                    TLE_tdiff = [(sc_TLE_times[i+1] - sc_TLE_times[i])*24 for i in range(len(sc_TLE_times) - 1)]
+                    TLE_tdiff_dict[NORAD] = TLE_tdiff
+        
+        # Sort the dictionary by ascending NORAD ID
+        TLE_tdiff_dict = dict(sorted(TLE_tdiff_dict.items()))
+        const_tle_rates.append(TLE_tdiff_dict)
+        
+    return const_tle_rates
