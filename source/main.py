@@ -63,12 +63,12 @@ def main ():
     # plot_arglat_analysis()
 
     # Benchmarking the NORAD, Suppelemental, and Operator ephemerides for 3 Starlink satellites. Uses the data in external/ephem_TLE_compare
-    # benchmark_plot() 
+    benchmark_plot() 
 
     # TODO if time: TLE age vs error
     # TODO if time: H/C/L correlation
     # TODO if time: Solar Flux vs error
-    
+
     plot_tle_rate_analysis()
 
 if __name__ == "__main__":

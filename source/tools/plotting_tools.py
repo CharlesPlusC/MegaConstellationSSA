@@ -14,9 +14,7 @@ from scipy import signal
 from typing import Dict, List, Union
 from collections import defaultdict
 from brokenaxes import brokenaxes
-#flatten the values of the four dictionaries into lists
 import itertools
-
 
 #local imports
 from .conversions import jd_to_mjd
@@ -403,7 +401,6 @@ def plot_diff_hist(sats_dataframe_list: List[pd.DataFrame],
     if show:
         plt.show()
 
-
 def plot_launch_latlon_diffs(sats_dataframe_list: List[pd.DataFrame] = [], show=False, criteria=1):
     """
     Generate scatter plots of latitude and longitude differences for satellites from various launches. 
@@ -647,7 +644,9 @@ def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int 
                 plt.show()
             plt.close()  # close the plot after saving to avoid overlapping
 
-def benchmark_plot():
+
+def benchmark_plot() -> None:
+
     """
     Plot the benchmarking analysis results.
 
@@ -896,11 +895,12 @@ def plot_arglat_analysis(show: bool = False) -> None:
 
 def plot_tle_rate_analysis(show: bool = False) -> None:
     """
-    Plot TLE production rate analysis.
+    Plot TLE latency (/production rate) analysis.
 
-    This function fetches the TLE data from two sources for OneWeb and Starlink satellites 
+    This function fetches the TLE data for OneWeb and Starlink satellites 
     and generates a set of histograms to visualize the latency between successive TLEs 
-    for these satellites. It saves the generated plot to an external file and optionally displays the plot.
+    for the satellites in these constellations. It saves the generated plot to an external 
+    file and optionally displays the plot.
 
     Parameters
     ----------

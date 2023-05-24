@@ -8,7 +8,7 @@ import numpy as np
 import datetime
 import json
 from multiprocessing import Pool
-from typing import List, Dict, Tuple, Optional, Any
+from typing import List, Dict, Tuple, Optional, Any, Set
 from astropy.time import Time
 import scipy as sp
 import scipy.fftpack
