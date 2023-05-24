@@ -17,22 +17,32 @@ import scipy.fftpack
 from .tletools import twoLE_parse, read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph, load_satellite_lists, read_spacex_ephemeris, spacex_ephem_to_dataframe, tle_convert
 from .conversions import car2kep, kep2car, jd_to_utc, utc_jd_date, midnight_jd_date, HCL_diff, dist_3d, alt_series, ecef_to_lla, eci2ecef_astropy, eci2latlon, TEME_to_MEME, parse_spacex_datetime_stamps, yyyy_mm_dd_hh_mm_ss_to_jd
 
-rmse = lambda x: np.sqrt(np.mean(np.square(x)))
-
-def master_sgp4_ephemeris(start_date, stop_date, master_TLE, update = True, dt = 15*60, ):
-    """Given a list of TLEs, a start day, and a stop day, return a list of SGP4 propagated ephemerides for each TLE in the list
-
-    Args:
-        start_day (string): start day in the format [YYYY,MM,DD, HH, MM, SS]
-        stop_day (string): stop day in the format [YYYY,MM,DD, HH, MM, SS]
-        TLE_list (list): list of TLEs
-        dt (float): time step in seconds (default is 15 minutes)
-        update (bool): if True, the ephemeris will be updated with each new TLE (default is True)
-
-    Returns:
-        ephemeris, orbit_ages: ephemeris in list format, list of orbit ages in hours that correspond to the ephemeris
+def master_sgp4_ephemeris(start_date, stop_date, master_TLE, update = True, dt = 15*60):
     """
-        #convert the start and stop dates to jd time stamps (midnight on the day)
+    Given a start day, stop day, and a list of TLEs, this function returns a list of SGP4 propagated ephemerides for each TLE in the list.
+
+    Parameters
+    ----------
+    start_date : list
+        Start date in the format [YYYY,MM,DD, HH, MM, SS].
+    stop_date : list
+        Stop date in the format [YYYY,MM,DD, HH, MM, SS].
+    master_TLE : list
+        List of TLEs.
+    update : bool, optional
+        If True, the ephemeris will be updated with each new TLE (default is True).
+    dt : float, optional
+        Time step in seconds (default is 15 minutes).
+
+    Returns
+    -------
+    master_ephemeris : list
+        Ephemeris in list format.
+    orbit_ages : list
+        List of orbit ages in hours that correspond to the ephemeris.
+
+    """
+    #convert the start and stop dates to jd time stamps (midnight on the day)
     jd_start = utc_jd_date(start_date[2], start_date[1], start_date[0], 0, 0, 0) #midnight on the start day
     jd_stop = utc_jd_date(stop_date[2], stop_date[1], stop_date[0], 0, 0, 0) #midnight on the stop day
 
@@ -100,6 +110,30 @@ def master_sgp4_ephemeris(start_date, stop_date, master_TLE, update = True, dt =
     return master_ephemeris, orbit_ages
 
 def master_sgp4_ephemeris_optimized(start_date, stop_date, master_TLE, update = True, dt = 15*60):
+    """
+    Optimized version of the master_sgp4_ephemeris function.
+
+    Parameters
+    ----------
+    start_date : list
+        Start date in the format [YYYY,MM,DD, HH, MM, SS].
+    stop_date : list
+        Stop date in the format [YYYY,MM,DD, HH, MM, SS].
+    master_TLE : list
+        List of TLEs.
+    update : bool, optional
+        If True, the ephemeris will be updated with each new TLE (default is True).
+    dt : float, optional
+        Time step in seconds (default is 15 minutes).
+
+    Returns
+    -------
+    master_ephemeris : list
+        Ephemeris in list format.
+    orbit_ages : list
+        List of orbit ages in hours that correspond to the ephemeris.
+
+    """
     jd_start = utc_jd_date(start_date[2], start_date[1], start_date[0], 0, 0, 0) 
     jd_stop = utc_jd_date(stop_date[2], stop_date[1], stop_date[0], 0, 0, 0) 
 
@@ -235,6 +269,23 @@ def TLE_pair_analyse(pair_TLE_list):
     return master_ephs,eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times, orbit_ages, lats, lons
 
 def analyze_files(args):
+    """
+    Analyzes files containing NORAD Two-Line Element (TLE) data and supplemental (SUP) TLE data. 
+    
+    This function reads NORAD and SUP TLE data from specified files, finds matching pairs based on NORAD ID,
+    performs analysis on the differences between NORAD and SUP TLEs, and outputs the results in a CSV file.
+
+    Parameters
+    ----------
+    args : tuple
+        A tuple containing the following elements:
+            NORAD_file (str): Filename of the NORAD TLE data file.
+            SUP_file (str): Filename of the SUP TLE data file.
+            NORAD_TLE_folder (str): Path to the directory containing the NORAD TLE data file.
+            SUP_TLE_folder (str): Path to the directory containing the SUP TLE data file.
+            analysis_output_path (str): Path to the directory where the output CSV file will be saved.
+
+    """
     NORAD_file, SUP_file, NORAD_TLE_folder, SUP_TLE_folder, analysis_output_path = args
     #extract the numerical values from NORAD_file and SUP_file
     NORAD_id = re.findall(r'\d+', NORAD_file)
@@ -262,6 +313,25 @@ def analyze_files(args):
         df.to_csv(total_out_path)
 
 def NORAD_vs_SUP_TLE_analysis(NORADS = [], analysis_output_path = 'output/TLE_analysis/'):
+    """ 
+    Performs a comparison analysis between NORAD and SUP TLEs for a given list of NORAD IDs.
+
+    This function runs a parallelized comparison of TLE data from the NORAD and SUP sources for specified spacecrafts.
+    The results of the analysis are saved in .csv files.
+
+    Parameters
+    ----------
+    NORADS : list of str, optional
+        List of NORAD IDs of the spacecraft to compare. Each ID should be a string. Defaults to an empty list.
+    analysis_output_path : str, optional
+        Path to output the .csv files at the end of the analysis. Defaults to 'output/TLE_analysis/'.
+
+    Raises
+    ------
+    ValueError
+        If NORADS list is not specified or is empty.
+
+    """
     NORAD_TLE_folder = 'external/NORAD_TLEs/'
     SUP_TLE_folder = 'external/SUP_TLEs/'
 
