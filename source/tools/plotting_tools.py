@@ -14,11 +14,13 @@ from scipy import signal
 from typing import Dict, List, Union
 from collections import defaultdict
 from brokenaxes import brokenaxes
+#flatten the values of the four dictionaries into lists
+import itertools
 
 
 #local imports
 from .conversions import jd_to_mjd
-from .analysis_tools import TLE_arglat_dict, compute_fft, sup_gp_op_benchmark
+from .analysis_tools import TLE_arglat_dict, compute_fft, sup_gp_op_benchmark, TLE_rate_dicts
 
 # Set the default font size for the plots
 mpl.rcParams['font.size'] = 11
@@ -878,6 +880,85 @@ def plot_arglat_analysis(show=False):
     plt.savefig('output/plots/TLE_production/tle_arglat_hist.png', dpi=300, bbox_inches='tight')
     if show: 
         plt.show()
+
+def plot_tle_rate_analysis(show=False):
+
+    NORAD_rate_dicts = TLE_rate_dicts(tle_folder = 'external/NORAD_TLEs/')
+    SUP_rate_dicts = TLE_rate_dicts(tle_folder = 'external/SUP_TLEs/')
+
+    NORAD_ow = NORAD_rate_dicts[0] #Oneweb
+    NORAD_sl = NORAD_rate_dicts[1] #Starlink
+
+    SUP_ow = SUP_rate_dicts[0] #Oneweb
+    SUP_sl = SUP_rate_dicts[1] #Starlink
+
+    # Flatten the values of the four dictionaries into lists
+    #TODO: there is definitely a better way of doing this
+    NORAD_ow_flat = list(itertools.chain.from_iterable(NORAD_ow.values()))
+    NORAD_sl_flat = list(itertools.chain.from_iterable(NORAD_sl.values()))
+    SUP_ow_flat = list(itertools.chain.from_iterable(SUP_ow.values()))
+    SUP_sl_flat = list(itertools.chain.from_iterable(SUP_sl.values()))
+
+    # now replicate the two plots above but put them side by side in subplots
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(8,5))
+
+    bins = np.arange(0, 40, 2)
+
+    ax1.hist(NORAD_ow_flat, bins=bins, alpha=0.5, label='NORAD TLEs', color="xkcd:azure")
+    ax1.hist(SUP_ow_flat, bins=bins, alpha=0.5, label='SUP TLEs', color="xkcd:blue")
+    ax1.set_xlim(0,30)
+    ax1.set_ylim(0,25000)
+    #add ticks every 2 hours
+    ax1.set_xticks(np.arange(0, 30.1, 2))
+    # rotate the ticks so they don't overlap
+    ax1.tick_params(axis='x', rotation=35)
+    
+    # calculate the mean and standard deviation of the NORAD TLEs and the SUP TLEs and add them to the plot on the middle of the right 
+    # side of the plot
+    # ax1.text(2, 20000, 'NORAD TLEs mean: {:.2f} hours '.format(np.mean(NORAD_ow_flat)))
+    # ax1.text(2, 18000, 'NORAD TLEs std: {:.2f} hours '.format(np.std(NORAD_ow_flat)))
+    # ax1.text(2, 16000, 'SUP TLEs mean: {:.2f} hours '.format(np.mean(SUP_ow_flat)))
+    # ax1.text(2, 14000, 'SUP TLEs std: {:.2f} hours '.format(np.std(SUP_ow_flat)))
+    ax1.legend()
+    ax1.grid()
+    ax1.set_xlabel('TLE Latency (Hours/TLE)')
+    ax1.set_ylabel('Number of TLEs')
+    ax1.set_title('OneWeb')
+
+    bins = np.arange(0, 40, 2)
+    ax2.hist(NORAD_sl_flat, bins=bins, alpha=0.5, label='NORAD TLEs', color="xkcd:orange")
+    ax2.hist(SUP_sl_flat, bins=bins, alpha=0.5, label='SUP TLEs', color="xkcd:coral")
+    ax2.set_xlim(0,30)
+    ax2.set_ylim(0,25000)
+    #add ticks every 2 hours
+    ax2.set_xticks(np.arange(0, 30.1, 2))
+    # rotate the ticks so they don't overlap
+    ax2.tick_params(axis='x', rotation=35)
+    #remove the y ticks
+    ax2.set_yticklabels([])
+
+    # calculate the mean and standard deviation of the NORAD TLEs and the SUP TLEs and add them to the plot on the middle of the right
+    # side of the plot
+    # ax2.text(2, 20000, 'NORAD TLEs mean: {:.2f} hours '.format(np.mean(NORAD_sl_flat)))
+    # ax2.text(2, 18000, 'NORAD TLEs std: {:.2f} hours '.format(np.std(NORAD_sl_flat)))
+    # ax2.text(2, 16000, 'SUP TLEs mean: {:.2f} hours '.format(np.mean(SUP_sl_flat)))
+    # ax2.text(2, 14000, 'SUP TLEs std: {:.2f} hours '.format(np.std(SUP_sl_flat)))
+
+    ax2.legend()
+    ax2.grid()
+    ax2.set_xlabel('TLE Latency (Hours/TLE)')
+    ax2.set_ylabel('')
+    ax2.set_title('Starlink')
+
+    plt.tight_layout()
+
+    # save the figure
+    fig.savefig('output/plots/TLE_production/TLE_Latencies.png', dpi=300)
+
+    if show: 
+        plt.show()
+
+
 
 if __name__ == "__main__":
     pass

@@ -1,8 +1,8 @@
 import os
 import sys
-from tools.analysis_tools import NORAD_vs_SUP_TLE_analysis, TLE_analysis_to_df, launch_specific_stats, sup_gp_op_benchmark, TLE_arglat_dict
+from tools.analysis_tools import TLE_rate_dicts, NORAD_vs_SUP_TLE_analysis, TLE_analysis_to_df, launch_specific_stats, sup_gp_op_benchmark, TLE_arglat_dict
 from tools.tletools import load_satellite_lists
-from tools.plotting_tools import plot_arglat_analysis, plot_altitude_timeseries, plot_fft_comparison, plot_diff_subplots, plot_diff_hist, plot_launch_latlon_diffs, plot_ground_tracks, plot_map_diffs_smallvals_all, benchmark_plot
+from tools.plotting_tools import plot_tle_rate_analysis, plot_arglat_analysis, plot_altitude_timeseries, plot_fft_comparison, plot_diff_subplots, plot_diff_hist, plot_launch_latlon_diffs, plot_ground_tracks, plot_map_diffs_smallvals_all, benchmark_plot
 import cProfile
 import numpy as np
 
@@ -62,8 +62,10 @@ def main ():
     # Histogram of the argument of latitude at which each TLE is produced for all available NORAD IDs as a function of source
     # plot_arglat_analysis()
 
+
+
     # Benchmarking the NORAD, Suppelemental, and Operator ephemerides for 3 Starlink satellites. Uses the data in external/ephem_TLE_compare
-    benchmark_plot() 
+    # benchmark_plot() 
 
     # #TODO: axis formatting for benchmark plot
     # TODO: TLE age analysis
@@ -71,7 +73,7 @@ def main ():
     # TODO if time: H/C/L correlation
     # TODO if time: Solar Flux vs error
     # test_argument_of_latitude()
-
+    plot_tle_rate_analysis()
 
 if __name__ == "__main__":
     main()
