@@ -64,7 +64,8 @@ The state vectors for each spacecraft orbit are continuously updated with new TL
 <img src="misc/TLE_algo_outline.png" width="50%" height="50%">
 
 __Data Manipulation:__
-Each NORAD ID is assigned a Pandas Dataframe. All the data relevant to each launch (epehemerides, differences between the ephemerides, lat, lon, etc.) are all included in the NORAD ID's respective dataframe. To calculate or perform analyses on these, most functions are geared towards reading lists of Pandas Dataframes.
+
+To perform the analyes, the decision to assign each spacecraft a Pandas Dataframe was made. Within this Dataframe, all the data relevant to a satellite (epehemerides, differences between the ephemerides, lat, lon, launch number, TLE latency, etc.) are all included in the NORAD ID's respective Dataframe. These Dataframes were then grouped in lists of Dataframes where each list represented a constellation. As a result, to calculate or perform analyses on these data, most functions in this repo are geared towards reading lists of Pandas Dataframes.
 
 ## Data
 - The data for the SUP_TLEs and NORAD_TLEs are already provided to save time. 
