@@ -76,7 +76,7 @@ __SupTLE vs GP vs Operator Ephemeris:__
 The 3-way benchmarking analysis that was performed on the Supplemental, NORAD and Operator ephemerides uses the ephemerides that are stored in the _"external/ephem_TLE_compare"_ folder. Each sub-folder here belongs to one spacecraft (NORAD ID). 
 
 ## Outputs:
-The following repo will enable you to replicate all figures in the paper and a number of others that were not included for brevity.
+The following repo will enable you to replicate all figures in the paper (and a number of others that were not included for brevity). As a quick illustration of the capabilities contained some example are included below.
 
 __altitude time series plots__
 
