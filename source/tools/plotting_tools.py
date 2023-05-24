@@ -958,7 +958,5 @@ def plot_tle_rate_analysis(show=False):
     if show: 
         plt.show()
 
-
-
 if __name__ == "__main__":
     pass

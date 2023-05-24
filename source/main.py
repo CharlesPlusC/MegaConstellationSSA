@@ -62,17 +62,13 @@ def main ():
     # Histogram of the argument of latitude at which each TLE is produced for all available NORAD IDs as a function of source
     # plot_arglat_analysis()
 
-
-
     # Benchmarking the NORAD, Suppelemental, and Operator ephemerides for 3 Starlink satellites. Uses the data in external/ephem_TLE_compare
     # benchmark_plot() 
 
-    # #TODO: axis formatting for benchmark plot
-    # TODO: TLE age analysis
     # TODO if time: TLE age vs error
     # TODO if time: H/C/L correlation
     # TODO if time: Solar Flux vs error
-    # test_argument_of_latitude()
+    
     plot_tle_rate_analysis()
 
 if __name__ == "__main__":
