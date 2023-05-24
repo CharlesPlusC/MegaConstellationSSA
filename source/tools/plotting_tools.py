@@ -1,4 +1,6 @@
-"""Set of plotting tools for the project. Most of these are based on the use of lists of pandas dataframes."""
+"""
+Set of plotting tools for the project. Most of these are based on the use of lists of pandas dataframes.
+"""
 
 import os
 import pandas as pd
@@ -643,7 +645,6 @@ def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int 
             if show == True:
                 plt.show()
             plt.close()  # close the plot after saving to avoid overlapping
-
 
 def benchmark_plot() -> None:
 
