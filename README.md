@@ -93,23 +93,23 @@ __Cross-track/along-track/height/3D difference time-series subplots__
 
 __Constellation Ground Tracks__
 
-<img src="output/plots/ground_tracks/g_tracks.png">
+<img src="output/plots/ground_tracks/g_tracks.png" width="65%" height="65%">
 
 __Relation between error and Geographical Location__
 
-<img src="output/plots/ground_tracks/diffs_gtrax/OneWeb_l_diffs.png">
+<img src="output/plots/ground_tracks/diffs_gtrax/OneWeb_l_diffs.png" width="65%" height="65%">
 
 __Error Dimension Histogram__
 
-<img src="output/plots/histograms/all_diffs_hist.png">
+<img src="output/plots/histograms/all_diffs_hist.png" width="65%" height="65%">
 
 __Argument of Latitude of TLE Production__
 
-<img src=output/plots/TLE_production/tle_arglat_hist.png>
+<img src=output/plots/TLE_production/tle_arglat_hist.png width="65%" height="65%">
 
 __Latency of TLE Production__
 
-<img src=output/plots/TLE_production/TLE_Latencies.png>
+<img src=output/plots/TLE_production/TLE_Latencies.png width="65%" height="65%">
 
 __Benchmarking NORAD, Supplemental and Operator Orbit Solutions__
 
