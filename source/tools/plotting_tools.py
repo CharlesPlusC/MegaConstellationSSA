@@ -190,9 +190,7 @@ def plot_fft_comparison(list_of_dfs: List[pd.DataFrame], diff_types: List[str] =
             if show:
                 plt.show()
 
-def plot_diff_subplots(sats_dataframe: List[pd.DataFrame],
-                       diffs: Union[str, List[str]] = 'all',
-                       show: bool = True) -> None:
+def plot_diff_subplots(sats_dataframe: List[pd.DataFrame], diffs: Union[str, List[str]] = 'all', show: bool = True) -> None:
     """
     Generate subplots for specified differences in satellite data per constellation.
 
@@ -649,25 +647,23 @@ def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int 
                 plt.show()
             plt.close()  # close the plot after saving to avoid overlapping
 
-
-# def extract_norad_ids(gp_list):
-#     return [gp_path[-9:-4] for gp_path in gp_list]
-
-# def configure_plot_attributes(axis, color, time, value, line_style, line_width):
-#     for index in range(len(time)):
-#         axis.axvline(x=time[index], color=color, linestyle=line_style, linewidth=line_width)
-
-# def configure_subplot(axis, color, title, time, value, y_label, sup_time, gp_time):
-#     axis.plot(time, value, label='GP', color=color)
-#     axis.grid(True)
-#     configure_plot_attributes(axis, color, sup_time, value, 'dotted', 2)
-#     configure_plot_attributes(axis, color, gp_time, value, 'dotted', 2)
-
 def benchmark_plot():
+    """
+    Plot the benchmarking analysis results.
+
+    This function plots differences in orbital elements H, C, L and 3D positions between 
+    NORAD (GP), supplementary (SUP) and operator (Op) TLE data, for the satellites whos data is in "external/ephem_TLE_compare". 
+
+    The differences are plotted as a function of time in Modified Julian Date (MJD) format. 
+    Vertical dotted lines represent the epochs of the respective TLE data. 
+
+    Each NORAD ID is plotted in a separate subplot column, with four rows of plots for H, C, L and 3D differences.
+
+    Note:
+    This function expects that the required data have been precomputed by the function `sup_gp_op_benchmark()`.
+
+    """
     all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list = sup_gp_op_benchmark()
-    # # slice all_triple_ephems so as to be left with the first 7/8rds of the data in each dataframe
-    # for i in range(len(all_triple_ephems)):
-    #     all_triple_ephems[i] = all_triple_ephems[i][:int(len(all_triple_ephems[i])*(7/8))]
 
     #convert all_sup_tle_epochs and all_gp_tle_epochs to mjd_time
     for i in range(len(all_sup_tle_epochs)):
@@ -799,7 +795,24 @@ def benchmark_plot():
 
     plt.show()
 
-def plot_arglat_analysis(show=False):
+def plot_arglat_analysis(show: bool = False) -> None:
+    """
+    Plot argument of latitude analysis of TLEs.
+
+    This function fetches the TLE data (converted to argument of latitude values) 
+    from two sources for OneWeb and Starlink satellites and generates a set of histograms 
+    to visualize the distribution of the argument of latitude for these satellites. 
+    It saves the generated plot to an external file and optionally displays the plot.
+
+    Parameters
+    ----------
+    show : bool, optional
+        If True, the generated plot is displayed. The default is False.
+
+    Returns
+    -------
+    None
+    """
     GP_arglats = TLE_arglat_dict(selected_satellites='external/selected_satellites.json', tle_folder = 'external/NORAD_TLEs/')
     SUP_arglats = TLE_arglat_dict(selected_satellites='external/selected_satellites.json', tle_folder = 'external/SUP_TLEs/')
 
@@ -881,7 +894,23 @@ def plot_arglat_analysis(show=False):
     if show: 
         plt.show()
 
-def plot_tle_rate_analysis(show=False):
+def plot_tle_rate_analysis(show: bool = False) -> None:
+    """
+    Plot TLE production rate analysis.
+
+    This function fetches the TLE data from two sources for OneWeb and Starlink satellites 
+    and generates a set of histograms to visualize the latency between successive TLEs 
+    for these satellites. It saves the generated plot to an external file and optionally displays the plot.
+
+    Parameters
+    ----------
+    show : bool, optional
+        If True, the generated plot is displayed. The default is False.
+
+    Returns
+    -------
+    None
+    """
 
     NORAD_rate_dicts = TLE_rate_dicts(tle_folder = 'external/NORAD_TLEs/')
     SUP_rate_dicts = TLE_rate_dicts(tle_folder = 'external/SUP_TLEs/')
