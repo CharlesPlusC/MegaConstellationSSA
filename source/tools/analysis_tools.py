@@ -416,8 +416,16 @@ def TLE_analysis_to_df(NORAD_IDs: list = None):
 
     return oneweb_dfs, starlink_dfs
 
-def calculate_stats(df_list):
-    """Calculate the statistics for each dataframe in the list"""
+def calculate_stats(df_list: List[pd.DataFrame]) -> pd.DataFrame:
+    """
+    Calculate statistics for each dataframe in the list.
+
+    Args:
+        df_list (List[pd.DataFrame]): List of dataframes.
+
+    Returns:
+        pd.DataFrame: Pandas dataframe containing statistics for each launch and each constellation.
+    """
     # concatenate all dataframes in the list
     df_all = pd.concat(df_list, ignore_index=True)
 
@@ -445,11 +453,16 @@ def calculate_stats(df_list):
 
     return stats
 
-def launch_specific_stats(list_of_dfs, export=True):
-    """Take a lists of dataframes and return launch-specific analysis of positional differences 
+def launch_specific_stats(list_of_dfs: List[pd.DataFrame], export: bool = True) -> pd.DataFrame:
+    """
+    Perform launch-specific analysis of positional differences for a list of dataframes.
+
+    Args:
+        list_of_dfs (List[pd.DataFrame]): List of dataframes containing positional data.
+        export (bool, optional): Flag indicating whether to export the summary statistics to a CSV file. Defaults to True.
 
     Returns:
-        pd.DataFrame: Pandas dataframe containing summary statistics for each launch and each constellations
+        pd.DataFrame: Pandas dataframe containing summary statistics for each launch and each constellation.
     """
     launch_summary_stats = calculate_stats(list_of_dfs)  
     print("launch summary stats: ", launch_summary_stats)
@@ -486,15 +499,15 @@ def compute_fft(df: pd.DataFrame, diff_type: str) -> Tuple[np.ndarray, np.ndarra
 
     return fftfreqs[im], 10 * np.log10(diff_psd[im])
 
-def find_files_sup_gp_op(folder_path = 'external/ephem_TLE_compare'):
+def find_files_sup_gp_op(folder_path: str = 'external/ephem_TLE_compare') -> Tuple[List[str], List[str], List[str]]:
     """
-    This function returns a list of file paths for files in the given directory.
-    
+    Find SUP TLE, GP TLE, and operator ephemeris files in the specified directory.
+
     Args:
-        folder_path (str): Path to the directory.
-    
+        folder_path (str): Path to the directory containing the files.
+
     Returns:
-        list: List of file paths.
+        Tuple[List[str], List[str], List[str]]: Lists of file paths for SUP TLEs, GP TLEs, and operator ephemerides, respectively.
     """
     sup_list, gp_list, ephem_list = [], [], []
     for sc_folder in os.listdir(folder_path):
@@ -507,9 +520,30 @@ def find_files_sup_gp_op(folder_path = 'external/ephem_TLE_compare'):
                 ephem_list.append(os.path.join(folder_path, sc_folder, file))
     return sup_list, gp_list, ephem_list
 
-def sup_gp_op_benchmark():
+def sup_gp_op_benchmark() -> Tuple[List[pd.DataFrame], List[List[float]], List[List[float]], List[str]]:
+    """
+    Perform a benchmark analysis comparing SUP TLEs, GP TLEs, and operator ephemerides.
 
-    # 57.3494% age difference between sup and gp TLEs against operator ephem
+    This function reads SUP TLEs, GP TLEs, and operator ephemerides for each spacecraft, combines the TLEs to match the ephemeris time steps,
+    converts the TLEs and ephemerides to MEME coordinate system, and calculates the differences (H, C, L, 3D) between the TLEs and operator ephemerides.
+    The results are stored in pandas DataFrames for each spacecraft.
+
+    Returns
+    -------
+    all_triple_ephems : list of pd.DataFrame
+        List of combined ephemeris data for each spacecraft, including the differences between SUP TLEs, GP TLEs, and operator ephemerides.
+    all_sup_tle_epochs : list of list of float
+        List of the epochs of the SUP TLEs for each spacecraft.
+    all_gp_tle_epochs : list of list of float
+        List of the epochs of the GP TLEs for each spacecraft.
+    gp_list : list of str
+        List of file paths for GP TLEs.
+
+    Notes
+    -----
+    This function relies on several helper functions including `find_files_sup_gp_op`, `read_spacex_ephemeris`, `read_TLEs`,
+    `combine_TLE2eph`, `TEME_to_MEME`, `spacex_ephem_to_dataframe`, and the NumPy library.
+    """
 
     sup_list, gp_list, ephem_list = find_files_sup_gp_op()
         
@@ -629,24 +663,6 @@ def sup_gp_op_benchmark():
         all_triple_ephems.append(triple_ephem_df)
     return all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list
 
-def get_NORADS_from_JSON(selected_satellites='external/selected_satellites.json'):
-
-    # Open and load the JSON file as a Python dictionary
-    with open(selected_satellites, 'r') as f:
-        data = json.load(f)
-    
-    # Create an empty list to store the ID numbers
-    ids_list = []
-    
-    # Iterate over the constellations
-    for constellation in data.values():
-        # Iterate over the levels of each constellation
-        for level in constellation.values():
-            # Append the ID numbers to the list
-            ids_list.append(level)
-    
-    return ids_list
-
 def TLE_arglat_dict(selected_satellites: str='external/selected_satellites.json', tle_folder: str='external/NORAD_TLEs/') -> List[Dict[int, List[float]]]:
     """
     Generate a list of dictionaries containing argument of latitude values for each NORAD ID in each satellite constellation.
@@ -708,15 +724,32 @@ def TLE_arglat_dict(selected_satellites: str='external/selected_satellites.json'
         const_TLE_arglat_dict[constellation] = TLE_arglat_dict #add the dictionary of NORAD IDs and TLE arglats to the dictionary for each constellation
     return const_TLE_arglat_dict #return the dictionary of dictionaries for each constellation
 
-def TLE_rate_dicts(selected_satellites: str='external/selected_satellites.json', tle_folder = 'external/NORAD_TLEs/'):
-    """Given a list of lists of NORAD IDs, populate a dictionary of TLE rate (hours/TLE) for each NORAD ID in each list.
+def TLE_rate_dicts(selected_satellites: str='external/selected_satellites.json', tle_folder: str='external/NORAD_TLEs/') -> List[Dict[int, List[float]]]:
+    """
+    Given a list of lists of NORAD IDs, populate a dictionary of TLE rate (hours/TLE) for each NORAD ID in each list.
 
-    Args:
-        const_norad_list (array-like): a list of lists of NORAD IDS. For example, [[NORAD_Oneweb1, NORAD_Oneweb2, NORAD_Oneweb3], [NORAD_Starlink1, NORAD_Starlink2, NORAD_Starlink3]].
-        tle_folder (str, optional): Path of folder containing text files with TLE lists. Defaults to 'external/NORAD_TLEs'.
+    This function reads the selected satellite data from a JSON file and retrieves the NORAD IDs for each constellation. 
+    It then reads the Two-Line Element (TLE) data from text files, calculates the time differences between consecutive TLEs,
+    and converts the time differences to TLE rates (hours/TLE). The TLE rates are organized into dictionaries separated by constellation.
 
-    Returns:
-        list: list of dictionaries of TLE rates (hours/TLE) per NORAD ID separated by constellation.
+    Parameters
+    ----------
+    selected_satellites : str, optional
+        Path to the JSON file containing the selected satellites' NORAD IDs. 
+        Each entry in the JSON file should correspond to a constellation. Defaults to 'external/selected_satellites.json'.
+    tle_folder : str, optional
+        Path to the folder containing the TLE text files for each NORAD ID. Defaults to 'external/NORAD_TLEs/'.
+
+    Returns
+    -------
+    const_tle_rates : list of dict of {int: list of float}
+        List of dictionaries, where each dictionary corresponds to a constellation. 
+        Each dictionary's keys are NORAD IDs, and the values are lists of TLE rates (hours/TLE) for each NORAD ID.
+
+    Notes
+    -----
+    This function relies on the helper functions `read_TLEs`, `TLE_time`, and `TLE_rate`, which are responsible for reading the TLEs from text files,
+    calculating the TLE times.
     """
 
     with open(selected_satellites) as file:
