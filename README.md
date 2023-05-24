@@ -101,6 +101,14 @@ __Error Dimension Histogram__
 
 <img src="output/plots/histograms/all_diffs_hist.png">
 
+__Argument of Latitude of TLE Production__
+
+<img src=output/plots/TLE_production/tle_arglat_hist.png>
+
+__Benchmarking NORAD, Supplemental and Operator Orbit Solutions__
+
+<img src=output/plots/benchmark/SUPvsGPvsOp_06022023.png width="50%" height="50%">
+
 __Launch statistics__
 Summary statistics of the analysis are generated and can be found in the _"output/launch_specific/launch_summary_stats.csv"_ folder.
 
