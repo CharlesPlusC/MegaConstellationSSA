@@ -60,10 +60,18 @@ def main ():
     # plot_map_diffs_smallvals_all(all_dfs, show=False, criteria=1) #errors within 1 SD from the mean
     
     # Histogram of the argument of latitude at which each TLE is produced for all available NORAD IDs as a function of source
-    plot_arglat_analysis()
+    # plot_arglat_analysis()
 
     # Benchmarking the NORAD, Suppelemental, and Operator ephemerides for 3 Starlink satellites. Uses the data in external/ephem_TLE_compare
-    # benchmark_plot()
+    benchmark_plot() 
+
+    # #TODO: axis formatting for benchmark plot
+    # TODO: TLE age analysis
+    # TODO if time: TLE age vs error
+    # TODO if time: H/C/L correlation
+    # TODO if time: Solar Flux vs error
+    # test_argument_of_latitude()
+
 
 if __name__ == "__main__":
     main()
