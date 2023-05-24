@@ -58,14 +58,15 @@ password = YourPassword
 
 ## Information:
 
-__SGP4 Update Algorithm:__
-The state vectors for each spacecraft orbit are continuously updated with new TLEs as these become available. The outline of the algorithm that performs this is as follows:
-
-<img src="misc/TLE_algo_outline.png" width="50%" height="50%">
-
-__Data Manipulation:__
+__Data Processing:__
 
 To perform the analyes, the decision to assign each spacecraft a Pandas Dataframe was made. Within this Dataframe, all the data relevant to a satellite (epehemerides, differences between the ephemerides, lat, lon, launch number, TLE latency, etc.) are all included in the NORAD ID's respective Dataframe. These Dataframes were then grouped in lists of Dataframes where each list represented a constellation. As a result, to calculate or perform analyses on these data, most functions in this repo are geared towards reading lists of Pandas Dataframes.
+
+__SGP4 Update Algorithm:__
+
+The state vectors for each spacecraft orbit are continuously updated with new TLEs as these become available. The outline of the algorithm that performs this is as follows:
+
+<img src="misc/TLE_algo_outline.png" width="65%" height="65%">
 
 ## Data
 - The data for the SUP_TLEs and NORAD_TLEs are already provided to save time. 
@@ -116,17 +117,19 @@ Summary statistics of the analysis are generated and can be found in the _"outpu
 ## Issues
 If you have any issues with the code, please raise an issue on this repository and I will try to get back to you as soon as possible.
 
-## Envs
-If you make changes to your environment and you wish to save these to the envionment file:
-``` bash
-conda env export > megaconst_env.yml
-```
-
-## NOTES:
-if you get an error when install basemap on mac-m1, try:
+### Known Issues:
+if you get an error when trying to install basemap (particularly on Apple Silicon), try:
 ``` bash
 pip install --upgrade setuptools wheel pip
 conda install -c conda-forge cartopy
 conda install -c conda-forge geos 
 conda install -c conda-forge basemap
 ```
+
+## Envs
+If you make changes to your environment and you wish to save these to the envionment file:
+``` bash
+conda env export > megaconst_env.yml
+```
+
+
