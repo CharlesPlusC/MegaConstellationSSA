@@ -107,7 +107,7 @@ __Argument of Latitude of TLE Production__
 
 __Benchmarking NORAD, Supplemental and Operator Orbit Solutions__
 
-<img src=output/plots/benchmark/SUPvsGPvsOp_06022023.png width="50%" height="50%">
+<img src=output/plots/benchmark/SUPvsGPvsOp_06022023.png width="80%">
 
 __Launch statistics__
 Summary statistics of the analysis are generated and can be found in the _"output/launch_specific/launch_summary_stats.csv"_ folder.
