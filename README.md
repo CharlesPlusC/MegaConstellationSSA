@@ -107,6 +107,10 @@ __Argument of Latitude of TLE Production__
 
 <img src=output/plots/TLE_production/tle_arglat_hist.png>
 
+__Latency of TLE Production__
+
+<img src=output/plots/TLE_production/TLE_Latencies.png>
+
 __Benchmarking NORAD, Supplemental and Operator Orbit Solutions__
 
 <img src=output/plots/benchmark/SUPvsGPvsOp_06022023.png width="80%">
