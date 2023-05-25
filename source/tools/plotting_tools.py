@@ -1,6 +1,7 @@
-"""Set of plotting tools for the project. Most of these are based on the use of lists of pandas dataframes."""
+"""
+Set of plotting tools for the project. Most of these are based on the use of lists of pandas dataframes.
+"""
 
-import os
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -10,13 +11,9 @@ import matplotlib as mpl
 from mpl_toolkits.basemap import Basemap
 import matplotlib.gridspec as gridspec
 import json
-from scipy import signal
 from typing import Dict, List, Union
 from collections import defaultdict
-from brokenaxes import brokenaxes
-#flatten the values of the four dictionaries into lists
 import itertools
-
 
 #local imports
 from .conversions import jd_to_mjd
@@ -190,9 +187,7 @@ def plot_fft_comparison(list_of_dfs: List[pd.DataFrame], diff_types: List[str] =
             if show:
                 plt.show()
 
-def plot_diff_subplots(sats_dataframe: List[pd.DataFrame],
-                       diffs: Union[str, List[str]] = 'all',
-                       show: bool = True) -> None:
+def plot_diff_subplots(sats_dataframe: List[pd.DataFrame], diffs: Union[str, List[str]] = 'all', show: bool = True) -> None:
     """
     Generate subplots for specified differences in satellite data per constellation.
 
@@ -404,7 +399,6 @@ def plot_diff_hist(sats_dataframe_list: List[pd.DataFrame],
     plt.savefig('output/plots/histograms/all_diffs_hist.png', dpi=300)  # Save with a single filename for all differences
     if show:
         plt.show()
-
 
 def plot_launch_latlon_diffs(sats_dataframe_list: List[pd.DataFrame] = [], show=False, criteria=1):
     """
@@ -649,25 +643,95 @@ def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int 
                 plt.show()
             plt.close()  # close the plot after saving to avoid overlapping
 
+def plot_map_diffs_smallvals_subplot(list_of_dfs: List[pd.DataFrame], criteria: int = 1, show: bool = False) -> None:
+    grouped_dfs = defaultdict(list)
+    for df in list_of_dfs:
+        constellationname = df['constellation'][0]
+        grouped_dfs[constellationname].append(df)
 
-# def extract_norad_ids(gp_list):
-#     return [gp_path[-9:-4] for gp_path in gp_list]
+    num_constellations = len(grouped_dfs.keys())
+    num_diff_types = len(diff_types)
 
-# def configure_plot_attributes(axis, color, time, value, line_style, line_width):
-#     for index in range(len(time)):
-#         axis.axvline(x=time[index], color=color, linestyle=line_style, linewidth=line_width)
+    # Create figure with gridspec layout for flexible subplot arrangement
+    fig = plt.figure(figsize=(8*num_diff_types, 5*num_constellations))
+    gs = gridspec.GridSpec(num_constellations, num_diff_types)
 
-# def configure_subplot(axis, color, title, time, value, y_label, sup_time, gp_time):
-#     axis.plot(time, value, label='GP', color=color)
-#     axis.grid(True)
-#     configure_plot_attributes(axis, color, sup_time, value, 'dotted', 2)
-#     configure_plot_attributes(axis, color, gp_time, value, 'dotted', 2)
+    for diff_type_index, diff_type in enumerate(diff_types):
+        for constellation_index, (constellationname, df_group) in enumerate(grouped_dfs.items()):
+            diff_vals = []
+            mean_diff = []
+            std_diff = []
+            for df in df_group:
+                diff_vals.append(df[diff_type])
+                mean_diff.append(np.mean(df[diff_type]))
+                std_diff.append(np.std(df[diff_type]))
 
-def benchmark_plot():
+            mean_mean_diff = np.mean(mean_diff)
+            mean_std_diff = np.mean(std_diff)
+            max_diff = mean_mean_diff + criteria*mean_std_diff
+            min_diff = mean_mean_diff - criteria*mean_std_diff
+
+            criteria_df_list = []
+            for df in df_group:
+                criteria_df_list.append(df[df[diff_type] < max_diff])
+                criteria_df_list.append(df[df[diff_type] > min_diff])
+
+            criteria_df = pd.concat(criteria_df_list, ignore_index=True)
+
+            plt.set_cmap('seismic')
+            
+            # Add a new subplot in the grid
+            axs = fig.add_subplot(gs[constellation_index, diff_type_index])
+            
+            m = Basemap(projection='mill', llcrnrlat=-90, urcrnrlat=90, llcrnrlon=-180, urcrnrlon=180, resolution='c', ax=axs)
+            m.drawcoastlines()
+            m.drawcountries()
+            m.drawmapboundary(fill_color='xkcd:light grey')
+            m.scatter(criteria_df['lons'], criteria_df['lats'], latlon=True, alpha=0.3, s=0.3, c = criteria_df[diff_type], cmap='seismic', vmin=min_diff, vmax=max_diff)
+
+            sm = plt.cm.ScalarMappable(cmap='seismic', norm=plt.Normalize(vmin=min_diff, vmax=max_diff))
+            cbar = m.colorbar(sm, location='right', pad="5%")
+            cbar.set_label('Km', rotation=90, labelpad=5)
+            m.drawparallels(np.arange(-90., 120., 30.), labels=[1,0,0,0], fontsize=14)
+            m.drawmeridians(np.arange(-180., 181., 60.), labels=[0,0,0,1], fontsize=14)
+
+            # set the title
+            if diff_type == 'cart_pos_diffs':
+                axs.set_title(r'$\Delta$ 3D: ' + str(constellationname), fontsize=14)
+            elif diff_type == 'h_diffs':
+                axs.set_title(r'$\Delta$ H: '+ str(constellationname), fontsize=14)
+            elif diff_type == 'l_diffs':
+                axs.set_title(r'$\Delta$ L: '+ str(constellationname), fontsize=14)
+            elif diff_type == 'c_diffs':
+                axs.set_title(r'$\Delta$ C: '+ str(constellationname), fontsize=14)
+
+            axs.text(0.05, 0.95, 'Mean: ' + str(round(mean_mean_diff, 3)) + ' Km', transform=axs.transAxes, fontsize=14, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5, edgecolor='none'))
+            axs.text(0.05, 0.90, 'Std: ' + str(round(mean_std_diff, 3)) + ' Km', transform=axs.transAxes, fontsize=14, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5, edgecolor='none'))
+
+    plt.tight_layout()
+    plt.savefig('output/plots/ground_tracks/diffs_gtrax/all_plots.png', dpi=300)
+    if show == True:
+        plt.show()
+    plt.close()
+
+def benchmark_plot() -> None:
+
+    """
+    Plot the benchmarking analysis results.
+
+    This function plots differences in orbital elements H, C, L and 3D positions between 
+    NORAD (GP), supplementary (SUP) and operator (Op) TLE data, for the satellites whos data is in "external/ephem_TLE_compare". 
+
+    The differences are plotted as a function of time in Modified Julian Date (MJD) format. 
+    Vertical dotted lines represent the epochs of the respective TLE data. 
+
+    Each NORAD ID is plotted in a separate subplot column, with four rows of plots for H, C, L and 3D differences.
+
+    Note:
+    This function expects that the required data have been precomputed by the function `sup_gp_op_benchmark()`.
+
+    """
     all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list = sup_gp_op_benchmark()
-    # # slice all_triple_ephems so as to be left with the first 7/8rds of the data in each dataframe
-    # for i in range(len(all_triple_ephems)):
-    #     all_triple_ephems[i] = all_triple_ephems[i][:int(len(all_triple_ephems[i])*(7/8))]
 
     #convert all_sup_tle_epochs and all_gp_tle_epochs to mjd_time
     for i in range(len(all_sup_tle_epochs)):
@@ -799,7 +863,24 @@ def benchmark_plot():
 
     plt.show()
 
-def plot_arglat_analysis(show=False):
+def plot_arglat_analysis(show: bool = False) -> None:
+    """
+    Plot argument of latitude analysis of TLEs.
+
+    This function fetches the TLE data (converted to argument of latitude values) 
+    from two sources for OneWeb and Starlink satellites and generates a set of histograms 
+    to visualize the distribution of the argument of latitude for these satellites. 
+    It saves the generated plot to an external file and optionally displays the plot.
+
+    Parameters
+    ----------
+    show : bool, optional
+        If True, the generated plot is displayed. The default is False.
+
+    Returns
+    -------
+    None
+    """
     GP_arglats = TLE_arglat_dict(selected_satellites='external/selected_satellites.json', tle_folder = 'external/NORAD_TLEs/')
     SUP_arglats = TLE_arglat_dict(selected_satellites='external/selected_satellites.json', tle_folder = 'external/SUP_TLEs/')
 
@@ -881,7 +962,24 @@ def plot_arglat_analysis(show=False):
     if show: 
         plt.show()
 
-def plot_tle_rate_analysis(show=False):
+def plot_tle_rate_analysis(show: bool = False) -> None:
+    """
+    Plot TLE latency (/production rate) analysis.
+
+    This function fetches the TLE data for OneWeb and Starlink satellites 
+    and generates a set of histograms to visualize the latency between successive TLEs 
+    for the satellites in these constellations. It saves the generated plot to an external 
+    file and optionally displays the plot.
+
+    Parameters
+    ----------
+    show : bool, optional
+        If True, the generated plot is displayed. The default is False.
+
+    Returns
+    -------
+    None
+    """
 
     NORAD_rate_dicts = TLE_rate_dicts(tle_folder = 'external/NORAD_TLEs/')
     SUP_rate_dicts = TLE_rate_dicts(tle_folder = 'external/SUP_TLEs/')

@@ -8,7 +8,7 @@ import numpy as np
 import datetime
 import json
 from multiprocessing import Pool
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any, Set
 from astropy.time import Time
 import scipy as sp
 import scipy.fftpack
@@ -17,22 +17,32 @@ import scipy.fftpack
 from .tletools import twoLE_parse, read_TLEs, TLE_time, sgp4_prop_TLE, combine_TLE2eph, load_satellite_lists, read_spacex_ephemeris, spacex_ephem_to_dataframe, tle_convert
 from .conversions import car2kep, kep2car, jd_to_utc, utc_jd_date, midnight_jd_date, HCL_diff, dist_3d, alt_series, ecef_to_lla, eci2ecef_astropy, eci2latlon, TEME_to_MEME, parse_spacex_datetime_stamps, yyyy_mm_dd_hh_mm_ss_to_jd
 
-rmse = lambda x: np.sqrt(np.mean(np.square(x)))
-
-def master_sgp4_ephemeris(start_date, stop_date, master_TLE, update = True, dt = 15*60, ):
-    """Given a list of TLEs, a start day, and a stop day, return a list of SGP4 propagated ephemerides for each TLE in the list
-
-    Args:
-        start_day (string): start day in the format [YYYY,MM,DD, HH, MM, SS]
-        stop_day (string): stop day in the format [YYYY,MM,DD, HH, MM, SS]
-        TLE_list (list): list of TLEs
-        dt (float): time step in seconds (default is 15 minutes)
-        update (bool): if True, the ephemeris will be updated with each new TLE (default is True)
-
-    Returns:
-        ephemeris, orbit_ages: ephemeris in list format, list of orbit ages in hours that correspond to the ephemeris
+def master_sgp4_ephemeris(start_date: List[int], stop_date: List[int], master_TLE: List[List[Any]], update: bool = True, dt: int = 15*60) -> Tuple[List[Any], List[float]]:
     """
-        #convert the start and stop dates to jd time stamps (midnight on the day)
+    Given a start day, stop day, and a list of TLEs, this function returns a list of SGP4 propagated ephemerides for each TLE in the list.
+
+    Parameters
+    ----------
+    start_date : list
+        Start date in the format [YYYY,MM,DD, HH, MM, SS].
+    stop_date : list
+        Stop date in the format [YYYY,MM,DD, HH, MM, SS].
+    master_TLE : list
+        List of TLEs.
+    update : bool, optional
+        If True, the ephemeris will be updated with each new TLE (default is True).
+    dt : float, optional
+        Time step in seconds (default is 15 minutes).
+
+    Returns
+    -------
+    master_ephemeris : list
+        Ephemeris in list format.
+    orbit_ages : list
+        List of orbit ages in hours that correspond to the ephemeris.
+
+    """
+    #convert the start and stop dates to jd time stamps (midnight on the day)
     jd_start = utc_jd_date(start_date[2], start_date[1], start_date[0], 0, 0, 0) #midnight on the start day
     jd_stop = utc_jd_date(stop_date[2], stop_date[1], stop_date[0], 0, 0, 0) #midnight on the stop day
 
@@ -99,7 +109,31 @@ def master_sgp4_ephemeris(start_date, stop_date, master_TLE, update = True, dt =
 
     return master_ephemeris, orbit_ages
 
-def master_sgp4_ephemeris_optimized(start_date, stop_date, master_TLE, update = True, dt = 15*60):
+def master_sgp4_ephemeris_optimized(start_date: List[int], stop_date: List[int], master_TLE: List[List[Any]], update: bool = True, dt: int = 15*60) -> Tuple[List[Any], List[float]]:
+    """
+    Optimized version of the master_sgp4_ephemeris function.
+
+    Parameters
+    ----------
+    start_date : list
+        Start date in the format [YYYY,MM,DD, HH, MM, SS].
+    stop_date : list
+        Stop date in the format [YYYY,MM,DD, HH, MM, SS].
+    master_TLE : list
+        List of TLEs.
+    update : bool, optional
+        If True, the ephemeris will be updated with each new TLE (default is True).
+    dt : float, optional
+        Time step in seconds (default is 15 minutes).
+
+    Returns
+    -------
+    master_ephemeris : list
+        Ephemeris in list format.
+    orbit_ages : list
+        List of orbit ages in hours that correspond to the ephemeris.
+
+    """
     jd_start = utc_jd_date(start_date[2], start_date[1], start_date[0], 0, 0, 0) 
     jd_stop = utc_jd_date(stop_date[2], stop_date[1], stop_date[0], 0, 0, 0) 
 
@@ -137,7 +171,7 @@ def master_sgp4_ephemeris_optimized(start_date, stop_date, master_TLE, update = 
 
     return master_ephemeris, orbit_ages
 
-def TLE_pair_analyse(pair_TLE_list):
+def TLE_pair_analyse(pair_TLE_list: List[List[str]], plot: bool = False) -> Tuple[List[Any], List[Any], List[Any], List[Any], List[Any], List[Any], List[Any]]:
     
     """Takes an input two lists of TLEs. For the common time period over which there are TLEs in the list, the TLEs of each list will be propagated using the SGP4 propagator.
        A state vector [Julian Day, (x-eci, y-eci, z-eci),(u-eci, v-eci, w-eci)] will be output every 15 minutes for each spacecraft from midnight beggining on the first day of the available common time period of the provided TLE lists.
@@ -234,7 +268,26 @@ def TLE_pair_analyse(pair_TLE_list):
 
     return master_ephs,eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times, orbit_ages, lats, lons
 
-def analyze_files(args):
+def analyze_NORAD_vs_SUP(args: Tuple[str, str, str, str, str]) -> None:
+    """
+    Analyzes files containing NORAD Two-Line Element (TLE) data and supplemental (SUP) TLE data.
+
+    Parameters
+    ----------
+    args : tuple
+        A tuple containing the following elements:
+            NORAD_file : str
+                Filename of the NORAD TLE data file.
+            SUP_file : str
+                Filename of the SUP TLE data file.
+            NORAD_TLE_folder : str
+                Path to the directory containing the NORAD TLE data file.
+            SUP_TLE_folder : str
+                Path to the directory containing the SUP TLE data file.
+            analysis_output_path : str
+                Path to the directory where the output CSV file will be saved.
+    """
+
     NORAD_file, SUP_file, NORAD_TLE_folder, SUP_TLE_folder, analysis_output_path = args
     #extract the numerical values from NORAD_file and SUP_file
     NORAD_id = re.findall(r'\d+', NORAD_file)
@@ -261,7 +314,22 @@ def analyze_files(args):
         df = pd.DataFrame({'h_diffs': h_diffs, 'c_diffs': c_diffs, 'l_diffs': l_diffs, 'cart_pos_diffs': cart_pos_diffs, 'times': times, 'eph_alts_sup': eph_alts[0], 'eph_alts_norad': eph_alts[1], 'master_ephs_sup': master_ephs[0], 'master_ephs_norad': master_ephs[1], 'orbit_ages_sup': orbit_ages[0], 'orbit_ages_norad': orbit_ages[1], 'lats': lats, 'lons': lons})
         df.to_csv(total_out_path)
 
-def NORAD_vs_SUP_TLE_analysis(NORADS = [], analysis_output_path = 'output/TLE_analysis/'):
+def NORAD_vs_SUP_TLE_analysis(NORADS: Optional[List[str]] = None, analysis_output_path: str = 'output/TLE_analysis/') -> None:
+    """ 
+    Performs a comparison analysis between NORAD and SUP TLEs for a given list of NORAD IDs.
+
+    Parameters
+    ----------
+    NORADS : list of str, optional
+        List of NORAD IDs of the spacecraft to compare. Each ID should be a string. Defaults to an empty list.
+    analysis_output_path : str, optional
+        Path to output the .csv files at the end of the analysis. Defaults to 'output/TLE_analysis/'.
+
+    Raises
+    ------
+    ValueError
+        If NORADS list is not specified or is empty.
+    """
     NORAD_TLE_folder = 'external/NORAD_TLEs/'
     SUP_TLE_folder = 'external/SUP_TLEs/'
 
@@ -277,16 +345,21 @@ def NORAD_vs_SUP_TLE_analysis(NORADS = [], analysis_output_path = 'output/TLE_an
         # Create a pool of workers
         with Pool() as pool:
             # Use starmap to apply the analyze_files function to each pair of NORAD and SUP files
-            pool.map(analyze_files, [(NORAD_file, SUP_file, NORAD_TLE_folder, SUP_TLE_folder, analysis_output_path) for NORAD_file in NORAD_TLE_files for SUP_file in SUP_TLE_files])
+            pool.map(analyze_NORAD_vs_SUP, [(NORAD_file, SUP_file, NORAD_TLE_folder, SUP_TLE_folder, analysis_output_path) for NORAD_file in NORAD_TLE_files for SUP_file in SUP_TLE_files])
 
-def process_ephemeris_data(eph_str):
-    """Convert the ephemeris strings from the TLE analysis files into a list of floats.
+def process_ephemeris_data(eph_str: str) -> List[float]:
+    """
+    Convert the ephemeris strings from the TLE analysis files into a list of floats.
 
-    Args:
-        eph_str (str): The ephemeris string from the TLE analysis files
+    Parameters
+    ----------
+    eph_str : str
+        The ephemeris string from the TLE analysis files
 
-    Returns:
-        list: The ephemeris string converted to a list of floats
+    Returns
+    -------
+    list
+        The ephemeris string converted to a list of floats
     """
     eph_str = eph_str.split(' ')
     eph_time = eph_str[0][1:-1]
@@ -305,16 +378,21 @@ def process_ephemeris_data(eph_str):
     vel3 = float(vel3)
     return [eph_time, pos1, pos2, pos3, vel1, vel2, vel3]
 
-def add_launch_numbers_to_df(df):
+def add_launch_numbers_to_df(df: pd.DataFrame) -> pd.DataFrame:
     """
     Add the launch numbers to the dataframe based on the NORAD IDs of the satellites in the dataframe.
 
-    Args:
-        df (pandas dataframe): The dataframe to add the launch numbers to.
+    Parameters
+    ----------
+    df : pd.DataFrame
+        The dataframe to add the launch numbers to.
 
-    Returns:
-        df: The dataframe with the launch numbers added.
+    Returns
+    -------
+    df : pd.DataFrame
+        The dataframe with the launch numbers added.
     """
+
     with open('external/selected_satellites.json', 'r') as f:
         selected_satellites = json.load(f)
 
@@ -336,9 +414,30 @@ def add_launch_numbers_to_df(df):
 
     return df
     
-def process_TLE_analysis_file(file: str, TLE_analysis_path: str, oneweb_NORAD_IDs: set, starlink_NORAD_IDs: set) -> pd.DataFrame:
-    # read in the TLE analysis .csv file and apply minor processing changes
+def process_TLE_analysis_file(file: str, TLE_analysis_path: str, oneweb_NORAD_IDs: Set[str], starlink_NORAD_IDs: Set[str]) -> pd.DataFrame:
+    """
+    Process a TLE analysis file.
 
+    This function reads in a TLE analysis .csv file, applies minor processing changes, adds relevant information, and
+    returns the resulting DataFrame.
+
+    Parameters
+    ----------
+    file : str
+        The TLE analysis file to be processed.
+    TLE_analysis_path : str
+        Path to the TLE analysis file.
+    oneweb_NORAD_IDs : set of str
+        Set of NORAD IDs belonging to the OneWeb constellation.
+    starlink_NORAD_IDs : set of str
+        Set of NORAD IDs belonging to the Starlink constellation.
+
+    Returns
+    -------
+    df : pd.DataFrame
+        The processed DataFrame.
+
+    """
     print('Reading in file: ' + file)
     norad_id = file[:-4]
     df = pd.read_csv(TLE_analysis_path + file)
@@ -365,22 +464,21 @@ def process_TLE_analysis_file(file: str, TLE_analysis_path: str, oneweb_NORAD_ID
     
     return df
 
-def TLE_analysis_to_df(NORAD_IDs: list = None):
+def TLE_analysis_to_df(NORAD_IDs: Optional[List[str]] = None) -> Tuple[List[pd.DataFrame], List[pd.DataFrame]]:
     """
     Analyze TLE (Two-Line Element Set) data and convert it to pandas DataFrame.
     
-    This function reads TLE analysis files and categorizes them based on the constellation they belong to.
-    Each file is read into a DataFrame, which is then processed and appended to the respective list.
-    The function returns two lists of DataFrames, each corresponding to a specific constellation.
-    
-    Parameters:
-    NORAD_IDs (list, optional): List of NORAD IDs to be analyzed. If not specified, all TLE analysis files are analyzed.
+    Parameters
+    ----------
+    NORAD_IDs : list, optional
+        List of NORAD IDs to be analyzed. If not specified, all TLE analysis files are analyzed.
 
-    Returns:
-    tuple: Two lists of pandas DataFrames. The first list corresponds to the OneWeb constellation, 
-    and the second to the Starlink constellation.
+    Returns
+    -------
+    tuple
+        Two lists of pandas DataFrames. The first list corresponds to the OneWeb constellation, 
+        and the second to the Starlink constellation.
     """
-
     TLE_analysis_path = "output/TLE_analysis/"
     print("specified NORAD IDs: " + str(NORAD_IDs))
 
@@ -544,7 +642,6 @@ def sup_gp_op_benchmark() -> Tuple[List[pd.DataFrame], List[List[float]], List[L
     This function relies on several helper functions including `find_files_sup_gp_op`, `read_spacex_ephemeris`, `read_TLEs`,
     `combine_TLE2eph`, `TEME_to_MEME`, `spacex_ephem_to_dataframe`, and the NumPy library.
     """
-
     sup_list, gp_list, ephem_list = find_files_sup_gp_op()
         
 #     # now going through each spacecraft
@@ -716,8 +813,6 @@ def TLE_arglat_dict(selected_satellites: str='external/selected_satellites.json'
                             kep_elem = tle_convert(tle_dict)  #convert the TLE to Keplerian elements
                             # argp is in radians, true_anomaly is in radians now
                             argument_of_latitude = (kep_elem['arg_p'] + np.deg2rad(kep_elem['true_anomaly'])) % (2*np.pi) #calculate the argument of latitude
-                            if argument_of_latitude > 2 * np.pi:
-                                print('arglat > 2pi:', argument_of_latitude)
                             arg_lat = (argument_of_latitude * 180/np.pi) #convert the argument of latitude to degrees
                             sc_TLE_arglats.append(arg_lat) #append to the list of TLE arglats for that NORAD ID
                         TLE_arglat_dict[NORAD] = sc_TLE_arglats #add the list of TLE arglats to the dictionary for that NORAD ID
