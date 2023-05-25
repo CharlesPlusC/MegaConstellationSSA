@@ -12,7 +12,7 @@ from poliastro.frames import Planes
 import datetime
 from astropy.coordinates import GCRS, ITRS, CartesianRepresentation, CartesianDifferential, SkyCoord, GCRS, CIRS, TEME, TETE, ITRS, ICRS
 from pyproj import Transformer
-from typing import List, Tuple
+from typing import List, Tuple, Union
 
 def kep2car(a: float, e: float, i: float, w: float, W: float, V: float) -> Tuple[float, float, float, float, float, float]:
     """

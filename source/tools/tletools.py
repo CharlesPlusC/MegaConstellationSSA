@@ -12,7 +12,7 @@ from sgp4.api import Satrec
 import datetime
 from astropy.time import Time
 import pandas as pd
-from typing import Dict, List, Union, Tuple
+from typing import Dict, List, Union, Tuple, Any
 
 #local imports
 from .conversions import parse_spacex_datetime_stamps, yyyy_mm_dd_hh_mm_ss_to_jd
