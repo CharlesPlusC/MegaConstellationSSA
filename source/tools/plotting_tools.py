@@ -691,29 +691,28 @@ def plot_map_diffs_smallvals_subplot(list_of_dfs: List[pd.DataFrame], criteria: 
 
             sm = plt.cm.ScalarMappable(cmap='seismic', norm=plt.Normalize(vmin=min_diff, vmax=max_diff))
             cbar = m.colorbar(sm, location='right', pad="5%")
-            cbar.set_label('Km', rotation=90, labelpad=10)
-            m.drawparallels(np.arange(-90., 120., 30.), labels=[1,0,0,0], fontsize=10)
-            m.drawmeridians(np.arange(-180., 181., 60.), labels=[0,0,0,1], fontsize=10)
+            cbar.set_label('Km', rotation=90, labelpad=5)
+            m.drawparallels(np.arange(-90., 120., 30.), labels=[1,0,0,0], fontsize=14)
+            m.drawmeridians(np.arange(-180., 181., 60.), labels=[0,0,0,1], fontsize=14)
 
             # set the title
             if diff_type == 'cart_pos_diffs':
-                axs.set_title(r'$\Delta$ 3D: ' + str(constellationname), fontsize=11)
+                axs.set_title(r'$\Delta$ 3D: ' + str(constellationname), fontsize=14)
             elif diff_type == 'h_diffs':
-                axs.set_title(r'$\Delta$ H: '+ str(constellationname), fontsize=11)
+                axs.set_title(r'$\Delta$ H: '+ str(constellationname), fontsize=14)
             elif diff_type == 'l_diffs':
-                axs.set_title(r'$\Delta$ L: '+ str(constellationname), fontsize=11)
+                axs.set_title(r'$\Delta$ L: '+ str(constellationname), fontsize=14)
             elif diff_type == 'c_diffs':
-                axs.set_title(r'$\Delta$ C: '+ str(constellationname), fontsize=11)
+                axs.set_title(r'$\Delta$ C: '+ str(constellationname), fontsize=14)
 
-            axs.text(0.05, 0.95, 'Mean: ' + str(round(mean_mean_diff, 3)) + ' Km', transform=axs.transAxes, fontsize=10, verticalalignment='top')
-            axs.text(0.05, 0.90, 'Std: ' + str(round(mean_std_diff, 3)) + ' Km', transform=axs.transAxes, fontsize=10, verticalalignment='top')
+            axs.text(0.05, 0.95, 'Mean: ' + str(round(mean_mean_diff, 3)) + ' Km', transform=axs.transAxes, fontsize=14, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5, edgecolor='none'))
+            axs.text(0.05, 0.90, 'Std: ' + str(round(mean_std_diff, 3)) + ' Km', transform=axs.transAxes, fontsize=14, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5, edgecolor='none'))
 
     plt.tight_layout()
     plt.savefig('output/plots/ground_tracks/diffs_gtrax/all_plots.png', dpi=300)
     if show == True:
         plt.show()
     plt.close()
-
 
 def benchmark_plot() -> None:
 
