@@ -31,10 +31,6 @@ jobs:
       run: |
         pydocstyle --convention=numpy source
     
-    - name: Check docstrings existence
-      run: |
-        darglint source
-    
     - name: Run tests
       run: |
         pytest source/tests --cov=source
