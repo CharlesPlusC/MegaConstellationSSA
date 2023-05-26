@@ -4,6 +4,7 @@ channels:
   - defaults
 dependencies:
   - pip
+  - conda
   - python=3.8
   - numpy
   - pandas

@@ -25,13 +25,6 @@ jobs:
         python-version: 3.8
         auto-activate-base: false
 
-    - name: Check environment
-      shell: bash -l {0}
-      run: |
-        conda update conda
-        conda info
-        conda list
-
     - name: Run tests
       shell: bash -l {0}
       run: |
