@@ -1,5 +1,4 @@
 """Set of plotting tools for the project. Most of these are based on the use of lists of pandas dataframes."""
-
 import os
 import pandas as pd
 import numpy as np
@@ -37,7 +36,6 @@ with open(json_filepath, 'r') as f:
 def plot_altitude_timeseries(dfs: List[pd.DataFrame], show: bool = False) -> None:
     """
     Generate a time series plot of satellite altitudes.
-
     This function generates a scatter plot of satellite altitudes as a function of time, with each 
     satellite represented as a different series on the plot. The plot is saved to a specific directory
     and optionally displayed. 
@@ -59,7 +57,6 @@ def plot_altitude_timeseries(dfs: List[pd.DataFrame], show: bool = False) -> Non
     The function saves the generated plot to the 'output/plots/altitude/' directory and additionally 
     displays it if `show` is set to True.
     """
-
     sat_nums = []
     for df in dfs:
         sat_nums.append(df['NORAD_ID'].unique()[0])
@@ -111,7 +108,6 @@ def plot_fft_comparison(list_of_dfs: List[pd.DataFrame], diff_types: List[str] =
     """
     Generate a plot of the power spectral density (Fourier analysis) of the differences between NORAD 
     and operator TLEs for each launch.
-
     This function generates a plot in both time and frequency domains for the specified difference types. 
     Each launch is represented by a different series on the plot. The plots are saved to a specific directory
     and optionally displayed. 
@@ -191,7 +187,6 @@ def plot_fft_comparison(list_of_dfs: List[pd.DataFrame], diff_types: List[str] =
 def plot_diff_subplots(sats_dataframe: List[pd.DataFrame], diffs: Union[str, List[str]] = 'all', show: bool = True) -> None:
     """
     Generate subplots for specified differences in satellite data per constellation.
-
     This function generates a grid of subplots for specified differences, or all available differences if 'all' 
     is specified. Each satellite's difference data is plotted in a separate subplot, with the satellites grouped 
     by constellation. 
@@ -303,7 +298,6 @@ def plot_diff_hist(sats_dataframe_list: List[pd.DataFrame],
                    show: bool = False) -> None:
     """
     Generate histograms for specified differences in satellite data.
-
     This function generates histograms for a list of specified differences or all available differences if 'all'
     is specified. Each difference is plotted in a separate subplot, and the data is segmented by the satellite 
     constellation. The histogram also includes statistical data (mean and standard deviation) presented as text
@@ -403,8 +397,7 @@ def plot_diff_hist(sats_dataframe_list: List[pd.DataFrame],
 
 def plot_launch_latlon_diffs(sats_dataframe_list: List[pd.DataFrame] = [], show=False, criteria=1):
     """
-    Generate scatter plots of latitude and longitude differences for satellites from various launches. 
-
+    Generate scatter plots of latitude and longitude differences for satellites from various launches.
     This function generates a subplot for each unique launch found in the dataframes within `sats_dataframe_list`, 
     plotting the differences in latitude and longitude for each satellite in that launch. The differences plotted 
     are filtered based on a certain criterion, only including values within `criteria` standard deviations of the mean.
@@ -484,8 +477,7 @@ def plot_launch_latlon_diffs(sats_dataframe_list: List[pd.DataFrame] = [], show=
 
 def plot_ground_tracks(list_of_dfs: List[pd.DataFrame] = [], show: bool = False):
     """
-    Generate a plot of satellite ground tracks for selected launches from different constellations. 
-
+    Generate a plot of satellite ground tracks for selected launches from different constellations.
     The function reads in a list of dataframes, each representing a satellite with its geographic coordinates 
     over time. It then plots the ground track for each satellite on a Basemap plot. The dataframes in 
     `list_of_dfs` should contain columns 'lons', 'lats' and 'launch_no'. The color of each satellite's ground 
@@ -557,15 +549,23 @@ def plot_ground_tracks(list_of_dfs: List[pd.DataFrame] = [], show: bool = False)
         plt.show()
 
 def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int = 1, show: bool = False) -> None:
-    """Plot the differnces that are greater than "criteria" standard deviations from the mean for all the dataframes in list_of_dfs.
+    """
+    Plot the differences that are greater than "criteria" standard deviations from the mean for all the dataframes in list_of_dfs.
     Plot them onto a geographical map (lat/lon) and save the figure to a file.
 
-    Args:
-        list_of_dfs (List[pd.DataFrame]): list of dataframes containing the data to be plotted
-        criteria (int, optional): Differences within this many standard deviations of the mean will be retained. Defaults to 1.
-        show (bool, optional): Whether to display the plot. If set to False will just save to the location specified. Defaults to False.
+    Parameters
+    ----------
+    list_of_dfs : list of pandas.DataFrame
+        List of dataframes containing the data to be plotted.
+    criteria : int, optional
+        Differences within this many standard deviations of the mean will be retained. Defaults to 1.
+    show : bool, optional
+        Whether to display the plot. If set to False will just save to the location specified. Defaults to False.
+
+    Returns
+    -------
+    None
     """
-    
     for diff_type in diff_types:
 
         # group data by constellation
@@ -645,12 +645,11 @@ def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int 
             plt.close()  # close the plot after saving to avoid overlapping
 
 def benchmark_plot() -> None:
-
     """
     Plot the benchmarking analysis results.
 
     This function plots differences in orbital elements H, C, L and 3D positions between 
-    NORAD (GP), supplementary (SUP) and operator (Op) TLE data, for the satellites whos data is in "external/ephem_TLE_compare". 
+    NORAD (GP), supplementary (SUP) and operator (Op) TLE data, for the satellites whose data is in "external/ephem_TLE_compare". 
 
     The differences are plotted as a function of time in Modified Julian Date (MJD) format. 
     Vertical dotted lines represent the epochs of the respective TLE data. 
@@ -660,6 +659,9 @@ def benchmark_plot() -> None:
     Note:
     This function expects that the required data have been precomputed by the function `sup_gp_op_benchmark()`.
 
+    Returns
+    -------
+    None
     """
     all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list = sup_gp_op_benchmark()
 
@@ -910,7 +912,6 @@ def plot_tle_rate_analysis(show: bool = False) -> None:
     -------
     None
     """
-
     NORAD_rate_dicts = TLE_rate_dicts(tle_folder = 'external/NORAD_TLEs/')
     SUP_rate_dicts = TLE_rate_dicts(tle_folder = 'external/SUP_TLEs/')
 
