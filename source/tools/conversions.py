@@ -1,6 +1,4 @@
-"""
-Time and coordinate conversions
-"""
+"""Time and coordinate conversions"""
 import numpy as np
 import warnings
 from astropy import units as u

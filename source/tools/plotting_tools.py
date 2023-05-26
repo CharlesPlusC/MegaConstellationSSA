@@ -1,6 +1,4 @@
-"""
-Set of plotting tools for the project. Most of these are based on the use of lists of pandas dataframes.
-"""
+"""Set of plotting tools for the project. Most of these are based on the use of lists of pandas dataframes."""
 
 import os
 import pandas as pd

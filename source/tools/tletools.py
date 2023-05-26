@@ -1,6 +1,4 @@
-""" 
-Functions to download, propagate and manipulate TLE data. 
-"""
+""" Functions to load, propagate and manipulate TLE data. """
 #imports
 import os
 import configparser
