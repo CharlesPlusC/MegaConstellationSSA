@@ -219,7 +219,6 @@ def plot_diff_subplots(sats_dataframe: List[pd.DataFrame], diffs: Union[str, Lis
     displays them if `show` is set to True. Each subplot includes statistical data (mean and standard deviation) 
     presented as text and uses color to distinguish different satellite launches.
     """
-
     constellation_dict = {}
     for df in sats_dataframe:
         constellation = df['constellation'][0]
@@ -431,7 +430,6 @@ def plot_launch_latlon_diffs(sats_dataframe_list: List[pd.DataFrame] = [], show=
         If the keys of `launch_colour_dict` do not align with the launch identifiers in the dataframes.
 
     """
-
     #NOTE: this is specific to a 2*3 subplot layout
     #TODO: make this more general
 

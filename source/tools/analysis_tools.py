@@ -171,7 +171,7 @@ def master_sgp4_ephemeris_optimized(start_date: List[int], stop_date: List[int],
 
 def TLE_pair_analyse(pair_TLE_list: List[List[str]], plot: bool = False) -> Tuple[List[Any], List[Any], List[Any], List[Any], List[Any], List[Any], List[Any]]:
     """
-    Takes an input two lists of TLEs. For the common time period over which there are TLEs in the list, the TLEs of each list will be propagated using the SGP4 propagator.
+    Take an input two lists of TLEs. For the common time period over which there are TLEs in the list, the TLEs of each list will be propagated using the SGP4 propagator.
        
     A state vector [Julian Day, (x-eci, y-eci, z-eci),(u-eci, v-eci, w-eci)] will be output every 15 minutes for each spacecraft from midnight beggining on the first day of the available common time period of the provided TLE lists.
     These state vectors will be appended to a list for each spacecraft, and the pair of ephemerides will are returned in a list called "master_ephs".
