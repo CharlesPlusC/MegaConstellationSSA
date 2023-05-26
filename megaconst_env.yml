@@ -18,6 +18,7 @@ dependencies:
   - scipy
   - sgp4
   - pytest
+  - pytest-cov
   - pip:
     - sgp4
     - poliastro
