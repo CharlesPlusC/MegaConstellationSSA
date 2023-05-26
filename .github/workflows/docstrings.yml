@@ -1,0 +1,32 @@
+name: Check Docstrings (Numpy style)
+
+on:
+  push:
+    branches:
+      - master
+      - feature/workflow
+  pull_request:
+    branches:
+      - master
+      - feature/workflow
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - uses: actions/checkout@v2
+    
+    - name: Set up Python
+      uses: actions/setup-python@v2
+      with:
+        python-version: '3.x'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pytest pytest-cov pydocstyle
+    
+    - name: Check docstrings (Numpy style)
+      run: |
+        pydocstyle --convention=numpy source
