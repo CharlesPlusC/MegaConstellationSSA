@@ -6,9 +6,6 @@ dependencies:
   - pip
   - python=3.8
   - numpy
-  - requests
-  - json
-  - configparser
   - pandas
   - matplotlib
   - seaborn
