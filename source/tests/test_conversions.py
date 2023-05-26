@@ -71,6 +71,7 @@ def test_yyyy_mm_dd_hh_mm_ss_to_jd():
     assert jd == 2451545.0
 
 def test_kep2car():
+    """Test the kep2car function."""
     # Test using a known orbit
     a = 42164.0  # km, geostationary orbit
     e = 0.0
@@ -85,6 +86,7 @@ def test_kep2car():
     assert pytest.approx(z, abs=1e-9) == 0.0
 
 def test_car2kep():
+    """Test the car2kep function."""
     # Test using a known orbit
     x = -42164.0  # km, geostationary orbit
     y = 0.0
@@ -99,6 +101,7 @@ def test_car2kep():
     assert pytest.approx(i, abs=1e-9) == 0.0
 
 def test_eci2ecef_astropy():
+    """Test the eci2ecef_astropy function."""
     # Test using a known position and velocity
     eci_pos = np.array([[42164.0, 0.0, 0.0]])  # km
     eci_vel = np.array([[0.0, 3.074, 0.0]])  # km/s
@@ -109,6 +112,7 @@ def test_eci2ecef_astropy():
     assert pytest.approx(ecef_pos[0, 0], abs=1e-9) == 42164.0
 
 def test_ecef_to_lla():
+    """Test the ecef_to_lla function."""
     # Test using a known position
     x = [42164.0]
     y = [0.0]
@@ -120,6 +124,7 @@ def test_ecef_to_lla():
     assert pytest.approx(alt[0], abs=1e-9) == 35786.0  # Geostationary altitude
 
 def test_jd_to_utc():
+    """Test the jd_to_utc function."""
     # Test using a known date
     jd = 2451544.5  # 2000-01-01 00:00:00 UTC
     utc = jd_to_utc(jd)
