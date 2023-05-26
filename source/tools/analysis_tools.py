@@ -1,4 +1,4 @@
-"""Functions to analyse the TLEs and ephemerides"""
+"""Functions to analyse the TLEs and ephemerides."""
 import os
 import re
 import pandas as pd
@@ -170,10 +170,12 @@ def master_sgp4_ephemeris_optimized(start_date: List[int], stop_date: List[int],
     return master_ephemeris, orbit_ages
 
 def TLE_pair_analyse(pair_TLE_list: List[List[str]], plot: bool = False) -> Tuple[List[Any], List[Any], List[Any], List[Any], List[Any], List[Any], List[Any]]:
-    """Takes an input two lists of TLEs. For the common time period over which there are TLEs in the list, the TLEs of each list will be propagated using the SGP4 propagator.
-       A state vector [Julian Day, (x-eci, y-eci, z-eci),(u-eci, v-eci, w-eci)] will be output every 15 minutes for each spacecraft from midnight beggining on the first day of the available common time period of the provided TLE lists.
-       These state vectors will be appended to a list for each spacecraft, and the pair of ephemerides will are returned in a list called "master_ephs".
-        master_ephs,eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times
+    """
+    Takes an input two lists of TLEs. For the common time period over which there are TLEs in the list, the TLEs of each list will be propagated using the SGP4 propagator.
+       
+    A state vector [Julian Day, (x-eci, y-eci, z-eci),(u-eci, v-eci, w-eci)] will be output every 15 minutes for each spacecraft from midnight beggining on the first day of the available common time period of the provided TLE lists.
+    These state vectors will be appended to a list for each spacecraft, and the pair of ephemerides will are returned in a list called "master_ephs".
+    master_ephs,eph_alts, h_diffs, c_diffs, l_diffs, cart_pos_diffs, times
 
     Parameters
     ----------
@@ -296,7 +298,6 @@ def analyze_NORAD_vs_SUP(args: Tuple[str, str, str, str, str]) -> None:
             analysis_output_path : str
                 Path to the directory where the output CSV file will be saved.
     """
-
     NORAD_file, SUP_file, NORAD_TLE_folder, SUP_TLE_folder, analysis_output_path = args
     #extract the numerical values from NORAD_file and SUP_file
     NORAD_id = re.findall(r'\d+', NORAD_file)
@@ -324,7 +325,7 @@ def analyze_NORAD_vs_SUP(args: Tuple[str, str, str, str, str]) -> None:
         df.to_csv(total_out_path)
 
 def NORAD_vs_SUP_TLE_analysis(NORADS: Optional[List[str]] = None, analysis_output_path: str = 'output/TLE_analysis/') -> None:
-    """ 
+    """
     Perform a comparison analysis between NORAD and SUP TLEs for a given list of NORAD IDs.
 
     Parameters
@@ -871,7 +872,6 @@ def TLE_rate_dicts(selected_satellites: str='external/selected_satellites.json',
     This function relies on the helper functions `read_TLEs`, `TLE_time`, and `TLE_rate`, which are responsible for reading the TLEs from text files,
     calculating the TLE times.
     """
-
     with open(selected_satellites) as file:
         data = json.load(file)
     

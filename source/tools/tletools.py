@@ -1,4 +1,4 @@
-""" Functions to load, propagate and manipulate TLE data. """
+"""Functions to load, propagate and manipulate TLE data."""
 #imports
 import os
 import configparser
@@ -15,13 +15,15 @@ from typing import Dict, List, Union, Tuple
 from .conversions import parse_spacex_datetime_stamps, yyyy_mm_dd_hh_mm_ss_to_jd
 
 class MyError(Exception):
-    """Custom error class for satellite tracking errors.
+    """
+    Custom error class for satellite tracking errors.
 
     Parameters
     ----------
     Exception : Exception
         Base class for exceptions in this module.
     """
+
     def __init__(self, args: str):
         """
         Init method for exception class for satellite tracking errors.
@@ -56,7 +58,7 @@ def load_satellite_lists(file_path: str = "external/selected_satellites.json") -
 
 def SpaceTrack_authenticate() -> Tuple[str, str]:
     """
-    Authenticate with SpaceTrack using the credentials stored in the config file. 
+    Authenticate with SpaceTrack using the credentials stored in the config file.
 
     Returns
     -------
@@ -545,6 +547,7 @@ def TLE_time(TLE: str) -> float:
 def sgp4_prop_TLE(TLE: str, jd_start: float, jd_end: float, dt: float, alt_series: bool = False) -> List[List[Any]]:
     """
     Given a TLE, a start time, end time, and time step, propagate the TLE and return the time-series of Cartesian coordinates and accompanying time-stamps (MJD).
+    
     This is simply a wrapper for the SGP4 routine in the sgp4.api package (Brandon Rhodes).
 
     Parameters
@@ -686,7 +689,7 @@ def read_spacex_ephemeris(ephem_path: str) -> Tuple[float, float, int]:
 
 def spacex_ephem_to_dataframe(ephem_path: str) -> pd.DataFrame:
     """
-    Converts SpaceX ephemeris data into a pandas DataFrame. 
+    Convert SpaceX ephemeris data into a pandas DataFrame.
 
     Parameters
     ----------

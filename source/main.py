@@ -8,7 +8,7 @@ import cProfile
 import numpy as np
 
 def main ():
-    """Run all the analyses available"""
+    """Run all the analyses available."""
     # load the satellite lists from the source/satellite_lists.json file
     satellite_lists = load_satellite_lists()
 
