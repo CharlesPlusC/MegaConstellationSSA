@@ -17,6 +17,7 @@ dependencies:
   - astropy
   - scipy
   - sgp4
+  - pytest
   - pip:
     - sgp4
     - poliastro
