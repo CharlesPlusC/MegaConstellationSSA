@@ -9,7 +9,7 @@
 <h3 align="center">MegaConstellationSSA</h3>
 
 <p align="center">
-  Code repository accompanying the paper: C.Constant, S.Bhattarai, M.Ziebart "On the Limits of Current Practices in Uncooperative Space Surveillance: Analysis of Mega-Constellation Data Time-Series"(2023)
+  Code repository accompanying the paper: C.Constant, S.Bhattarai, M.Ziebart "The Limits of Current Practices in Uncooperative Space Surveillance: Analysis of Mega-Constellation Data Time-Series"(2023)
   <br />
   <a href="https://github.com/CharlesPlusC/MegaConstellationSSA/issues">Report Bug</a>
   ·
