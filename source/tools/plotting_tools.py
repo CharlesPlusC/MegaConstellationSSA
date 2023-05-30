@@ -553,6 +553,7 @@ def plot_ground_tracks(list_of_dfs: List[pd.DataFrame] = [], show: bool = False)
 def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int = 1, show: bool = False) -> None:
     """
     Plot the differences that are greater than "criteria" standard deviations from the mean for all the dataframes in list_of_dfs.
+    
     Plot them onto a geographical map (lat/lon) and save the figure to a file.
 
     Parameters
