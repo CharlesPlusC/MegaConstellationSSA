@@ -122,7 +122,7 @@ Summary statistics of the analysis are generated and can be found in the _"outpu
 If you have any issues with the code, please raise an issue on this repository and I will try to get back to you as soon as possible.
 
 ### Known Issues:
-if you get an error when trying to install basemap (particularly on Apple Silicon), try:
+if you get an error when trying to install basemap (particularly on Apple CPU), try:
 ``` bash
 pip install --upgrade setuptools wheel pip
 conda install -c conda-forge cartopy
