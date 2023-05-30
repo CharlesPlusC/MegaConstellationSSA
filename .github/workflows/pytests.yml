@@ -1,0 +1,31 @@
+name: Run PyTests
+
+on:
+  push:
+    branches:
+      - master
+      - feature/workflow
+  pull_request:
+    branches:
+      - master
+      - feature/workflow
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Set up Python and Conda Environment
+      uses: conda-incubator/setup-miniconda@v2
+      with:
+        activate-environment: megaconst_env
+        environment-file: megaconst_env.yml
+        python-version: 3.8
+        auto-activate-base: false
+
+    - name: Run tests
+      shell: bash -l {0}
+      run: |
+        pytest source/tests --cov=source
