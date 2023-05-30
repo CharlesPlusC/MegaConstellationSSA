@@ -58,7 +58,6 @@ def plot_altitude_timeseries(dfs: List[pd.DataFrame], show: bool = False) -> Non
     The function saves the generated plot to the 'output/plots/altitude/' directory and additionally 
     displays it if `show` is set to True.
     """
-
     sat_nums = []
     for df in dfs:
         sat_nums.append(df['NORAD_ID'].unique()[0])
@@ -221,7 +220,6 @@ def plot_diff_subplots(sats_dataframe: List[pd.DataFrame], diffs: Union[str, Lis
     displays them if `show` is set to True. Each subplot includes statistical data (mean and standard deviation) 
     presented as text and uses color to distinguish different satellite launches.
     """
-
     constellation_dict = {}
     for df in sats_dataframe:
         constellation = df['constellation'][0]
@@ -433,7 +431,6 @@ def plot_launch_latlon_diffs(sats_dataframe_list: List[pd.DataFrame] = [], show=
         If the keys of `launch_colour_dict` do not align with the launch identifiers in the dataframes.
 
     """
-
     #NOTE: this is specific to a 2*3 subplot layout
     #TODO: make this more general
 
@@ -556,15 +553,28 @@ def plot_ground_tracks(list_of_dfs: List[pd.DataFrame] = [], show: bool = False)
         plt.show()
 
 def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int = 1, show: bool = False) -> None:
-    """Plot the differnces that are greater than "criteria" standard deviations from the mean for all the dataframes in list_of_dfs.
+    """
+    Plot the differences that are greater than "criteria" standard deviations from the mean for all the dataframes in list_of_dfs.
     Plot them onto a geographical map (lat/lon) and save the figure to a file.
 
-    Args:
-        list_of_dfs (List[pd.DataFrame]): list of dataframes containing the data to be plotted
-        criteria (int, optional): Differences within this many standard deviations of the mean will be retained. Defaults to 1.
-        show (bool, optional): Whether to display the plot. If set to False will just save to the location specified. Defaults to False.
+    Parameters:
+    -----------
+    list_of_dfs : List[pd.DataFrame]
+        List of dataframes containing the data to be plotted.
+    criteria : int, optional
+        Differences within this many standard deviations of the mean will be retained. Defaults to 1.
+    show : bool, optional
+        Whether to display the plot. If set to False, the plot will only be saved. Defaults to False.
+
+    Returns:
+    --------
+    None
+
+    Notes:
+    ------
+    - This function requires the Basemap and matplotlib libraries.
+    - The output plots will be saved to the 'output/plots/ground_tracks/diffs_gtrax/' directory with filenames based on constellation name and difference type.
     """
-    
     for diff_type in diff_types:
 
         # group data by constellation
@@ -644,6 +654,42 @@ def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int 
             plt.close()  # close the plot after saving to avoid overlapping
 
 def plot_map_diffs_smallvals_subplot(list_of_dfs: List[pd.DataFrame], criteria: int = 1, show: bool = False) -> None:
+    """
+    Plot the map differences for small values using subplots.
+
+    Parameters:
+    -----------
+    list_of_dfs : List[pd.DataFrame]
+        List of DataFrames containing the data to be plotted.
+    criteria : int, optional
+        Criteria for determining the maximum and minimum differences, by default 1.
+    show : bool, optional
+        Flag indicating whether to display the plot, by default False.
+
+    Returns:
+    --------
+    None
+
+    Description:
+    ------------
+    This function plots the map differences for small values using subplots. It takes a list of DataFrames 
+    containing the data to be plotted. The differences are determined based on the specified criteria.
+
+    The map differences are plotted as scatter plots on a map projection using the Basemap library. Each 
+    subplot represents a different type of difference, and each DataFrame in the list represents a different 
+    constellation. The color of the scatter points represents the difference value.
+
+    The maximum and minimum differences are calculated based on the mean and standard deviation of the 
+    differences in each constellation. Data points with differences outside the calculated range are filtered 
+    out for plotting.
+
+    The resulting plots are saved to a file and can be optionally displayed.
+
+    Notes:
+    ------
+    - This function requires the Basemap and matplotlib libraries.
+    - The output plots are saved to the 'output/plots/ground_tracks/diffs_gtrax/all_plots.png' file.
+    """
     grouped_dfs = defaultdict(list)
     for df in list_of_dfs:
         constellationname = df['constellation'][0]
@@ -715,21 +761,30 @@ def plot_map_diffs_smallvals_subplot(list_of_dfs: List[pd.DataFrame], criteria: 
     plt.close()
 
 def benchmark_plot() -> None:
-
     """
     Plot the benchmarking analysis results.
 
-    This function plots differences in orbital elements H, C, L and 3D positions between 
-    NORAD (GP), supplementary (SUP) and operator (Op) TLE data, for the satellites whos data is in "external/ephem_TLE_compare". 
+    Parameters:
+    -----------
+    None
+
+    Returns:
+    --------
+    None
+
+    Description:
+    ------------
+    This function plots differences in orbital elements H, C, L, and 3D positions between 
+    NORAD (GP), supplementary (SUP), and operator (Op) TLE data for the satellites whose data is in "external/ephem_TLE_compare". 
 
     The differences are plotted as a function of time in Modified Julian Date (MJD) format. 
     Vertical dotted lines represent the epochs of the respective TLE data. 
 
-    Each NORAD ID is plotted in a separate subplot column, with four rows of plots for H, C, L and 3D differences.
+    Each NORAD ID is plotted in a separate subplot column with four rows of plots for H, C, L, and 3D differences.
 
-    Note:
-    This function expects that the required data have been precomputed by the function `sup_gp_op_benchmark()`.
-
+    Notes:
+    ------
+    This function expects that the required data has been precomputed by the function `sup_gp_op_benchmark()`.
     """
     all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list = sup_gp_op_benchmark()
 
@@ -980,7 +1035,6 @@ def plot_tle_rate_analysis(show: bool = False) -> None:
     -------
     None
     """
-
     NORAD_rate_dicts = TLE_rate_dicts(tle_folder = 'external/NORAD_TLEs/')
     SUP_rate_dicts = TLE_rate_dicts(tle_folder = 'external/SUP_TLEs/')
 
