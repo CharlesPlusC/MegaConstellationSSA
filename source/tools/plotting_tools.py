@@ -656,7 +656,7 @@ def plot_map_diffs_smallvals_subplot(list_of_dfs: List[pd.DataFrame], criteria: 
     Plot the map differences for small values using subplots.
 
     Parameters
-    -----------
+    ----------
     list_of_dfs : List[pd.DataFrame]
         List of DataFrames containing the data to be plotted.
     criteria : int, optional
@@ -665,11 +665,11 @@ def plot_map_diffs_smallvals_subplot(list_of_dfs: List[pd.DataFrame], criteria: 
         Flag indicating whether to display the plot, by default False.
 
     Returns
-    --------
+    -------
     None
 
     Description
-    ------------
+    -----------
     This function plots the map differences for small values using subplots. It takes a list of DataFrames 
     containing the data to be plotted. The differences are determined based on the specified criteria.
 
@@ -684,7 +684,7 @@ def plot_map_diffs_smallvals_subplot(list_of_dfs: List[pd.DataFrame], criteria: 
     The resulting plots are saved to a file and can be optionally displayed.
 
     Notes
-    ------
+    -----
     - This function requires the Basemap and matplotlib libraries.
     - The output plots are saved to the 'output/plots/ground_tracks/diffs_gtrax/all_plots.png' file.
     """
@@ -780,8 +780,8 @@ def benchmark_plot() -> None:
 
     Each NORAD ID is plotted in a separate subplot column with four rows of plots for H, C, L, and 3D differences.
 
-    Notes:
-    ------
+    Notes
+    -----
     This function expects that the required data has been precomputed by the function `sup_gp_op_benchmark()`.
     """
     all_triple_ephems, all_sup_tle_epochs, all_gp_tle_epochs, gp_list = sup_gp_op_benchmark()

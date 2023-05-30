@@ -1,6 +1,4 @@
-"""
-Time and coordinate conversions
-"""
+"""Time and coordinate conversions."""
 import numpy as np
 import warnings
 from astropy import units as u
@@ -243,7 +241,6 @@ def utc_jd_date(day: int, month: int, year: int, hours: int, minutes: int, secon
     float or int
         Julian Date or Modified Julian Date.
     """
-
     if midnight == True:
     #convert to datetime object (wihtout hours and seconds)
         date = datetime.datetime(year, month, day)
@@ -533,7 +530,6 @@ def parse_spacex_datetime_stamps(timestamps: List[str]) -> np.ndarray:
     np.ndarray
         Parsed timestamps (year, month, day, hour, minute, second, millisecond).
     """
-    
     # make an array where we will store the year, day of year, hour, minute, and second for each timestamp
     parsed_tstamps = np.zeros((len(timestamps), 7))
     

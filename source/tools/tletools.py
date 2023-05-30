@@ -1,6 +1,4 @@
-""" 
-Functions to download, propagate and manipulate TLE data. 
-"""
+"""Functions to load, propagate and manipulate TLE data."""
 #imports
 import os
 import configparser
@@ -12,15 +10,24 @@ from sgp4.api import Satrec
 import datetime
 from astropy.time import Time
 import pandas as pd
-from typing import Dict, List, Union, Tuple, Any
+from typing import Dict, List, Union, Tuple
 
 #local imports
 from .conversions import parse_spacex_datetime_stamps, yyyy_mm_dd_hh_mm_ss_to_jd
 
 class MyError(Exception):
+    """
+    Custom error class for satellite tracking errors.
+
+    Parameters
+    ----------
+    Exception : Exception
+        Base class for exceptions in this module.
+    """
+
     def __init__(self, args: str):
         """
-        Custom exception for satellite tracking errors.
+        Init method for exception class for satellite tracking errors.
 
         Parameters
         ----------
@@ -52,7 +59,7 @@ def load_satellite_lists(file_path: str = "external/selected_satellites.json") -
 
 def SpaceTrack_authenticate() -> Tuple[str, str]:
     """
-    Authenticate with SpaceTrack using the credentials stored in the config file. 
+    Authenticate with SpaceTrack using the credentials stored in the config file.
 
     Returns
     -------
@@ -122,7 +129,7 @@ def wait_for_next_request(lastRequest: float) -> None:
 
 def get_satellite_data(session: requests.Session, uriBase: str, requestCmdAction: str, requestOMMStarlink1: str, requestOMMStarlink2: str, s: str) -> str:
     """
-    Makes a GET request for a specific satellite's data.
+    Make a GET request for a specific satellite's data.
 
     Parameters
     ----------
@@ -154,7 +161,7 @@ def get_satellite_data(session: requests.Session, uriBase: str, requestCmdAction
 
 def NORAD_list_update(constellation, out_path = 'external/Constellation_NORAD_IDs/'):
     """
-    From spacetrack API, get the list of all available NORAD IDs for a given constellation. Add them to a text file
+    From spacetrack API, get the list of all available NORAD IDs for a given constellation. Add them to a text file.
 
     Parameters
     ----------
@@ -177,7 +184,6 @@ def NORAD_list_update(constellation, out_path = 'external/Constellation_NORAD_ID
     -----
     See https://www.space-track.org/documentation for details on REST queries
     """
-
     available_constellations = ['starlink','oneweb']
     if constellation not in available_constellations:
         raise ValueError("Invalid constellation name. Select one of: %s" % available_constellations)
@@ -250,7 +256,7 @@ def NORAD_list_update(constellation, out_path = 'external/Constellation_NORAD_ID
 
 def process_satellite_data(output: str, folder_path: str, s: str) -> None:
     """
-    Processes satellite TLE data and writes it to a file.
+    Process satellite TLE data and writes it to a file.
 
     Parameters
     ----------
@@ -279,7 +285,7 @@ def process_satellite_data(output: str, folder_path: str, s: str) -> None:
 
 def tle_convert(tle_dict: dict) -> dict:
     """
-    Converts a TLE dictionary into the corresponding Keplerian elements.
+    Convert a TLE dictionary into the corresponding Keplerian elements.
 
     Parameters
     ----------
@@ -291,7 +297,6 @@ def tle_convert(tle_dict: dict) -> dict:
     dict
         Dictionary containing Keplerian elements.
     """
-
     # Standard gravitational parameter for the Earth
     GM = 398600.4415 * (1e3)**3 # m^3/s^2
 
@@ -355,7 +360,7 @@ def tle_convert(tle_dict: dict) -> dict:
 
 def twoLE_parse(tle_2le: str) -> dict:
     """
-    Parses a 2-line element set (2LE) string and returns the data in a dictionary.
+    Parse a 2-line element set (2LE) string and returns the data in a dictionary.
 
     Parameters
     ----------
@@ -367,7 +372,6 @@ def twoLE_parse(tle_2le: str) -> dict:
     dict
         Dictionary of the data contained in the TLE string.
     """
-
     # This function takes a TLE string and returns a dictionary of the TLE data
     tle_lines = tle_2le.split('\n')
     tle_dict = {}
@@ -402,8 +406,7 @@ def twoLE_parse(tle_2le: str) -> dict:
 
 def download_tle_history(NORAD_ids: List[int], constellation: str, folder_path: str = "external/NORAD_TLEs") -> None:
     """
-    Downloads TLE history for a given list of NORAD IDs.
-    Note: This function takes a long time to run for large satellite lists due to API rate limits.
+    Download TLE history for a given list of NORAD IDs. This function takes a long time to run for large satellite lists due to API rate limits.
 
     Parameters
     ----------
@@ -414,7 +417,6 @@ def download_tle_history(NORAD_ids: List[int], constellation: str, folder_path: 
     folder_path : str, optional
         Path to the folder where the TLEs will be saved. Defaults to "external/NORAD_TLEs".
     """
-
     available_constellations = ["starlink", "oneweb"]
     if constellation not in available_constellations:
         raise ValueError(f"Invalid constellation name. Select one of: {available_constellations}")
@@ -501,7 +503,6 @@ def read_TLEs(filename: str) -> List[str]:
     list
         List of TLEs.
     """
-
     #open the file
     with open(filename, 'r') as f:
         #read the file
@@ -546,9 +547,9 @@ def TLE_time(TLE: str) -> float:
 
 def sgp4_prop_TLE(TLE: str, jd_start: float, jd_end: float, dt: float, alt_series: bool = False) -> List[List[Any]]:
     """
-    Given a TLE, a start time, end time, and time step, propagate the TLE and return the time-series of Cartesian coordinates,
-    and accompanying time-stamps (MJD).
-    Note: Simply a wrapper for the SGP4 routine in the sgp4.api package (Brandon Rhodes).
+    Given a TLE, a start time, end time, and time step, propagate the TLE and return the time-series of Cartesian coordinates and accompanying time-stamps (MJD).
+    
+    This is simply a wrapper for the SGP4 routine in the sgp4.api package (Brandon Rhodes).
 
     Parameters
     ----------
@@ -568,7 +569,6 @@ def sgp4_prop_TLE(TLE: str, jd_start: float, jd_end: float, dt: float, alt_serie
     list
         List of lists containing the time-series of Cartesian coordinates, and accompanying time-stamps (MJD).
     """
-
     if jd_start > jd_end:
         print('jd_start must be less than jd_end')
         return
@@ -606,7 +606,7 @@ def sgp4_prop_TLE(TLE: str, jd_start: float, jd_end: float, dt: float, alt_serie
 
 def combine_TLE2eph(TLE_list: List[str], jd_start: float, jd_stop: float, dt: float=(15 * 60)) -> Tuple[List[Any], List[Any]]:
     """
-    Takes a list of TLEs and returns an ephemeris that updates with each new TLE. Outputs a position and velocity every 15 minutes from the hour.
+    Take a list of TLEs and return an ephemeris that updates with each new TLE. Outputs a position and velocity every 15 minutes from the hour.
 
     Parameters
     ----------
@@ -660,7 +660,7 @@ def combine_TLE2eph(TLE_list: List[str], jd_start: float, jd_stop: float, dt: fl
 
 def read_spacex_ephemeris(ephem_path: str) -> Tuple[float, float, int]:
     """
-    Reads a SpaceX ephemeris file and extracts start time, end time, and step size.
+    Read a SpaceX ephemeris file and extracts start time, end time, and step size.
 
     Parameters
     ----------
@@ -690,7 +690,7 @@ def read_spacex_ephemeris(ephem_path: str) -> Tuple[float, float, int]:
 
 def spacex_ephem_to_dataframe(ephem_path: str) -> pd.DataFrame:
     """
-    Converts SpaceX ephemeris data into a pandas DataFrame. 
+    Convert SpaceX ephemeris data into a pandas DataFrame.
 
     Parameters
     ----------

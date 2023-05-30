@@ -1,9 +1,8 @@
-"""
-If you wish to re-download the TLEs, run this script.
-"""
+"""Script to download relevant TLE data from Space-Track."""
 from tools.tletools import download_tle_history, load_satellite_lists, NORAD_list_update
 
 def download_data_for_analysis():
+    """Download the TLEs from Space-track for the NORAD IDs in the satellite_lists.json file."""
     # load the satellite lists from the source/satellite_lists.json file
     satellite_lists = load_satellite_lists()
 
