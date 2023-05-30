@@ -1,3 +1,4 @@
+"""Main Analysis Script."""
 import os
 import sys
 from tools.analysis_tools import TLE_rate_dicts, NORAD_vs_SUP_TLE_analysis, TLE_analysis_to_df, launch_specific_stats, sup_gp_op_benchmark, TLE_arglat_dict
@@ -7,6 +8,7 @@ import cProfile
 import numpy as np
 
 def main ():
+    """Run all the analyses available."""
     # load the satellite lists from the source/satellite_lists.json file
     satellite_lists = load_satellite_lists()
 
@@ -73,8 +75,6 @@ def main ():
     # TODO if time: TLE age vs error
     # TODO if time: H/C/L correlation
     # TODO if time: Solar Flux vs error
-
-
 
 if __name__ == "__main__":
     main()
