@@ -3,11 +3,11 @@ name: Check Docstrings (Numpy style)
 on:
   push:
     branches:
-      - master
+      - main
       - feature/workflow
   pull_request:
     branches:
-      - master
+      - main
       - feature/workflow
 
 jobs:
