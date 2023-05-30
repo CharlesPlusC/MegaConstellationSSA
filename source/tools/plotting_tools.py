@@ -1,5 +1,6 @@
 """Set of plotting tools for the project. Most of these are based on the use of lists of pandas dataframes."""
 import os
+
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
@@ -9,10 +10,8 @@ import matplotlib as mpl
 from mpl_toolkits.basemap import Basemap
 import matplotlib.gridspec as gridspec
 import json
-from scipy import signal
 from typing import Dict, List, Union
 from collections import defaultdict
-from brokenaxes import brokenaxes
 import itertools
 
 #local imports
@@ -647,6 +646,77 @@ def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int 
             if show == True:
                 plt.show()
             plt.close()  # close the plot after saving to avoid overlapping
+
+def plot_map_diffs_smallvals_subplot(list_of_dfs: List[pd.DataFrame], criteria: int = 1, show: bool = False) -> None:
+    grouped_dfs = defaultdict(list)
+    for df in list_of_dfs:
+        constellationname = df['constellation'][0]
+        grouped_dfs[constellationname].append(df)
+
+    num_constellations = len(grouped_dfs.keys())
+    num_diff_types = len(diff_types)
+
+    # Create figure with gridspec layout for flexible subplot arrangement
+    fig = plt.figure(figsize=(8*num_diff_types, 5*num_constellations))
+    gs = gridspec.GridSpec(num_constellations, num_diff_types)
+
+    for diff_type_index, diff_type in enumerate(diff_types):
+        for constellation_index, (constellationname, df_group) in enumerate(grouped_dfs.items()):
+            diff_vals = []
+            mean_diff = []
+            std_diff = []
+            for df in df_group:
+                diff_vals.append(df[diff_type])
+                mean_diff.append(np.mean(df[diff_type]))
+                std_diff.append(np.std(df[diff_type]))
+
+            mean_mean_diff = np.mean(mean_diff)
+            mean_std_diff = np.mean(std_diff)
+            max_diff = mean_mean_diff + criteria*mean_std_diff
+            min_diff = mean_mean_diff - criteria*mean_std_diff
+
+            criteria_df_list = []
+            for df in df_group:
+                criteria_df_list.append(df[df[diff_type] < max_diff])
+                criteria_df_list.append(df[df[diff_type] > min_diff])
+
+            criteria_df = pd.concat(criteria_df_list, ignore_index=True)
+
+            plt.set_cmap('seismic')
+            
+            # Add a new subplot in the grid
+            axs = fig.add_subplot(gs[constellation_index, diff_type_index])
+            
+            m = Basemap(projection='mill', llcrnrlat=-90, urcrnrlat=90, llcrnrlon=-180, urcrnrlon=180, resolution='c', ax=axs)
+            m.drawcoastlines()
+            m.drawcountries()
+            m.drawmapboundary(fill_color='xkcd:light grey')
+            m.scatter(criteria_df['lons'], criteria_df['lats'], latlon=True, alpha=0.3, s=0.3, c = criteria_df[diff_type], cmap='seismic', vmin=min_diff, vmax=max_diff)
+
+            sm = plt.cm.ScalarMappable(cmap='seismic', norm=plt.Normalize(vmin=min_diff, vmax=max_diff))
+            cbar = m.colorbar(sm, location='right', pad="5%")
+            cbar.set_label('Km', rotation=90, labelpad=5)
+            m.drawparallels(np.arange(-90., 120., 30.), labels=[1,0,0,0], fontsize=14)
+            m.drawmeridians(np.arange(-180., 181., 60.), labels=[0,0,0,1], fontsize=14)
+
+            # set the title
+            if diff_type == 'cart_pos_diffs':
+                axs.set_title(r'$\Delta$ 3D: ' + str(constellationname), fontsize=14)
+            elif diff_type == 'h_diffs':
+                axs.set_title(r'$\Delta$ H: '+ str(constellationname), fontsize=14)
+            elif diff_type == 'l_diffs':
+                axs.set_title(r'$\Delta$ L: '+ str(constellationname), fontsize=14)
+            elif diff_type == 'c_diffs':
+                axs.set_title(r'$\Delta$ C: '+ str(constellationname), fontsize=14)
+
+            axs.text(0.05, 0.95, 'Mean: ' + str(round(mean_mean_diff, 3)) + ' Km', transform=axs.transAxes, fontsize=14, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5, edgecolor='none'))
+            axs.text(0.05, 0.90, 'Std: ' + str(round(mean_std_diff, 3)) + ' Km', transform=axs.transAxes, fontsize=14, verticalalignment='top', bbox=dict(facecolor='white', alpha=0.5, edgecolor='none'))
+
+    plt.tight_layout()
+    plt.savefig('output/plots/ground_tracks/diffs_gtrax/all_plots.png', dpi=300)
+    if show == True:
+        plt.show()
+    plt.close()
 
 def benchmark_plot() -> None:
     """
