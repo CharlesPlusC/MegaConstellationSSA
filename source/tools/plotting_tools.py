@@ -555,8 +555,8 @@ def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int 
     Plot the differences that are greater than "criteria" standard deviations from the mean for all the dataframes in list_of_dfs.
     Plot them onto a geographical map (lat/lon) and save the figure to a file.
 
-    Parameters:
-    -----------
+    Parameters
+    ----------
     list_of_dfs : List[pd.DataFrame]
         List of dataframes containing the data to be plotted.
     criteria : int, optional
@@ -564,12 +564,12 @@ def plot_map_diffs_smallvals_all(list_of_dfs: List[pd.DataFrame], criteria: int 
     show : bool, optional
         Whether to display the plot. If set to False, the plot will only be saved. Defaults to False.
 
-    Returns:
-    --------
+    Returns
+    -------
     None
 
-    Notes:
-    ------
+    Notes
+    -----
     - This function requires the Basemap and matplotlib libraries.
     - The output plots will be saved to the 'output/plots/ground_tracks/diffs_gtrax/' directory with filenames based on constellation name and difference type.
     """
@@ -655,7 +655,7 @@ def plot_map_diffs_smallvals_subplot(list_of_dfs: List[pd.DataFrame], criteria: 
     """
     Plot the map differences for small values using subplots.
 
-    Parameters:
+    Parameters
     -----------
     list_of_dfs : List[pd.DataFrame]
         List of DataFrames containing the data to be plotted.
@@ -664,11 +664,11 @@ def plot_map_diffs_smallvals_subplot(list_of_dfs: List[pd.DataFrame], criteria: 
     show : bool, optional
         Flag indicating whether to display the plot, by default False.
 
-    Returns:
+    Returns
     --------
     None
 
-    Description:
+    Description
     ------------
     This function plots the map differences for small values using subplots. It takes a list of DataFrames 
     containing the data to be plotted. The differences are determined based on the specified criteria.
@@ -683,7 +683,7 @@ def plot_map_diffs_smallvals_subplot(list_of_dfs: List[pd.DataFrame], criteria: 
 
     The resulting plots are saved to a file and can be optionally displayed.
 
-    Notes:
+    Notes
     ------
     - This function requires the Basemap and matplotlib libraries.
     - The output plots are saved to the 'output/plots/ground_tracks/diffs_gtrax/all_plots.png' file.
@@ -762,16 +762,16 @@ def benchmark_plot() -> None:
     """
     Plot the benchmarking analysis results.
 
-    Parameters:
+    Parameters
+    ----------
+    None
+
+    Returns
+    -------
+    None
+
+    Description
     -----------
-    None
-
-    Returns:
-    --------
-    None
-
-    Description:
-    ------------
     This function plots differences in orbital elements H, C, L, and 3D positions between 
     NORAD (GP), supplementary (SUP), and operator (Op) TLE data for the satellites whose data is in "external/ephem_TLE_compare". 
 
